@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Render the DiagnostechAI promo video (720x1280 @ 30fps, ~23s, H.264 MP4)."""
+"""Render the Ask Danny promo video (720x1280 @ 30fps, ~23s, H.264 MP4)."""
 
 import math
 import imageio
@@ -7,7 +7,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 W, H   = 720, 1280
 FPS    = 30
-OUT    = "/Users/sanchez/Desktop/DiagnostechAI-promo.mp4"
+OUT    = "/Users/sanchez/Desktop/Ask-Danny-promo-v1.mp4"
 
 CREAM     = (244, 242, 236)
 WHITE     = (255, 255, 255)
@@ -188,7 +188,7 @@ def scene_outro(d, t):
         draw_logo(d, W//2, 480 - int(20*(1-p1)), int(150*p1) or 1)
     p2 = ease_out(seg(t, 0.4, 0.9))
     if p2 > 0:
-        ctext(d, W//2, 630, "DiagnostechAI", font("Arial Bold.ttf", 58), INK)
+        ctext(d, W//2, 630, "Ask Danny", font("Arial Bold.ttf", 58), INK)
     p3 = ease_out(seg(t, 0.8, 1.3))
     if p3 > 0:
         ctext(d, W//2, 700, "One trip. Done.", LG, TERRA)

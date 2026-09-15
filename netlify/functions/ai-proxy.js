@@ -416,11 +416,13 @@ function resolveTier(body) {
 // Same list as ai-council.js. Duplicated because esbuild bundles each function
 // separately and a relative require across them does not survive it.
 const ALLOWED_ORIGINS = [
-  'https://diagnostechai.com',
-  'https://www.diagnostechai.com',
   'https://ask-danny-ai.com',
   'https://www.ask-danny-ai.com',
   'https://ask-danny.netlify.app',
+  // Old domain, now a redirect. Kept one release so a page cached before
+  // the switch can still reach the API; remove after that.
+  'https://diagnostechai.com',
+  'https://www.diagnostechai.com',
 ];
 
 exports.handler = async (event) => {

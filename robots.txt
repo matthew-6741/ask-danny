@@ -14,4 +14,4 @@ Disallow: /404.html
 Disallow: /api/
 Disallow: /.netlify/
 
-Sitemap: https://diagnostechai.com/sitemap.xml
+Sitemap: https://ask-danny-ai.com/sitemap.xml

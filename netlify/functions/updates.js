@@ -31,11 +31,13 @@ const MAX_EMAIL_LEN = 254;        // RFC 5321
 const EMAIL_RE = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,63}$/;
 
 const ALLOWED_ORIGINS = [
-  'https://diagnostechai.com',
-  'https://www.diagnostechai.com',
   'https://ask-danny-ai.com',
   'https://www.ask-danny-ai.com',
   'https://ask-danny.netlify.app',
+  // Old domain, now a redirect. Kept one release so a page cached before
+  // the switch can still reach the API; remove after that.
+  'https://diagnostechai.com',
+  'https://www.diagnostechai.com',
 ];
 
 // What the person actually agreed to, stored verbatim with their address. If
@@ -139,7 +141,7 @@ function page(title, heading, body, accent = '#E85B2A') {
   a{color:${accent}}
 </style></head><body><div class="card">
 <div class="mark">AD</div><h1>${heading}</h1>${body}
-<p><a href="https://diagnostechai.com">Back to Ask Danny</a></p>
+<p><a href="https://ask-danny-ai.com">Back to Ask Danny</a></p>
 </div></body></html>`;
 }
 

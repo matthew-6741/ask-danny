@@ -12,14 +12,14 @@
  * Env:
  *   ADMIN_TOKEN      required, the same one /api/subscribers uses
  *   RESEND_API_KEY   required to actually send (https://resend.com, free tier)
- *   MAIL_FROM        e.g. "Ask Danny <updates@diagnostechai.com>"
+ *   MAIL_FROM        e.g. "Ask Danny <updates@ask-danny-ai.com>"
  *                    The domain must be verified with the provider first.
  */
 
 const crypto = require('crypto');
 const { getStore } = require('@netlify/blobs');
 
-const SITE = 'https://diagnostechai.com';
+const SITE = 'https://ask-danny-ai.com';
 const RESEND_URL = 'https://api.resend.com/emails';
 const SEND_GAP_MS = 120;      // stay well under provider rate limits
 const MAX_SUBJECT = 160;
@@ -52,7 +52,7 @@ border-radius:14px;padding:32px">
   <hr style="border:0;border-top:1px solid #e4e3dc;margin:28px 0 16px">
   <p style="margin:0;font-size:12px;color:#7a7a72;line-height:1.5">
     You are getting this because you signed up for Ask Danny updates at
-    <a href="${SITE}" style="color:#7a7a72">diagnostechai.com</a>.<br>
+    <a href="${SITE}" style="color:#7a7a72">ask-danny-ai.com</a>.<br>
     <a href="${unsubUrl}" style="color:#7a7a72">Unsubscribe</a> — one click, takes effect immediately.
   </p>
 </div></body></html>`;

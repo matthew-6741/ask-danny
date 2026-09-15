@@ -1186,15 +1186,13 @@ exports.handler = async (event) => {
   // Only our own front-ends. A wildcard let any site call this endpoint from a
   // visitor's browser and spend the quota attributed to their IP.
   const ALLOWED_ORIGINS = [
-    'https://diagnostechai.com',
-    'https://www.diagnostechai.com',
     'https://ask-danny-ai.com',
     'https://www.ask-danny-ai.com',
-    // The Netlify subdomain follows the site name. It was renamed diagnostech
-    // -> ask-danny, and the old one now 404s; leaving it here would allow an
-    // origin nobody can reach while blocking the one people can.
     'https://ask-danny.netlify.app',
-    'http://localhost:3456',
+    // Old domain, now a redirect. Kept one release so a page cached before
+    // the switch can still reach the API; remove after that.
+    'https://diagnostechai.com',
+    'https://www.diagnostechai.com',
   ];
   const origin = event.headers.origin || event.headers.Origin || '';
   const cors = {

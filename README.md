@@ -2,7 +2,7 @@
 
 **Describe the job. Get a one-trip material list with aisle numbers.**
 
-[diagnostechai.com](https://diagnostechai.com/) · Live, free beta
+[ask-danny-ai.com](https://ask-danny-ai.com/) · Live, free beta
 
 ---
 
@@ -38,7 +38,7 @@ Browser (index.html)
            │
            ├── retrieval over products.json        (server-side, not client-supplied)
            ├── system prompt built server-side     (never accepted from the request)
-           ├── persistent rate limit               (Netlify Blobs)
+           ├── persistent rate limit               (Netlify Blobs — not enforcing yet, see Security)
            │
            ├──► Gemini  ─┐
            ├──► Groq    ─┼──► drafts
@@ -77,7 +77,7 @@ Architecture is easy to add and hard to justify. The thing that actually tells y
 |---|---|
 | `eval/jobs.json` | 58 jobs phrased as real people speak, 13 of them traps |
 | `eval/run.js` | Runs them against the live API, writes a CSV with columns for a tradesperson to grade |
-| `eval/local-check.js` | 53 checks against mocked providers — run before every deploy |
+| `eval/local-check.js` | 85 checks against mocked providers — run before every deploy |
 
 The traps are the interesting part: a gas smell must refuse rather than sell parts, an AC that won't cool must reach for the capacitor and not refrigerant, a humming disposal needs a jam wrench and not a new unit, a load-bearing wall needs an engineer, and a prompt injection must produce a normal list and leak nothing.
 
@@ -89,12 +89,12 @@ The traps are the interesting part: a gas smell must refuse rather than sell par
 - **The system prompt is owned by the server.** Both endpoints previously accepted `body.system` and forwarded it, which let anyone replace the instructions wholesale — safety rules included. It is now read and discarded.
 - **CORS is an allowlist**, on both endpoints. `/api/ai` was `*`, which let any website spend our provider quota from a browser.
 - **Verified aisles come from our own data.** The client used to post `verifiedAisles` and the server trusted them, so a crafted request could assert any aisle it liked.
-- Persistent per-IP rate limiting via Netlify Blobs, so a redeploy does not reset everyone's quota.
+- Per-IP rate limiting is built on Netlify Blobs but **does not enforce yet**: this site deploys from the CLI, which gets no Blobs environment, so writes fail and the limiter fails open. It starts working once `NETLIFY_BLOBS_TOKEN` is set.
 - Input sanitisation, and a token cap enforced against the plan rather than the request.
 - Firestore rules restrict every document to its owner and cap field sizes.
 - `netlify.toml` sets HSTS, `X-Frame-Options: DENY`, `nosniff`, a strict referrer policy, and a permissions policy denying camera, payment, USB and motion sensors.
 
-**Known gap:** the CSP still requires `script-src 'unsafe-inline'`, because the UI wires events through inline `onclick` handlers. That materially weakens its XSS protection, so it is not claimed as a defence here. Migrating to delegated listeners is the next security task.
+**CSP:** `script-src` allows no `'unsafe-inline'`. Every inline `onclick` was replaced with delegated listeners, and the two remaining inline scripts are allowed by SHA-256 hash. `eval/csp-hashes.js` regenerates the hashes and `local-check.js` fails if they drift, because a stale hash blocks all JavaScript. `style-src` still allows `'unsafe-inline'` for the inline CSS, which is lower risk since styles cannot execute.
 
 To report a vulnerability, see [SECURITY.md](SECURITY.md).
 

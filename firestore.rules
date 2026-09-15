@@ -1,4 +1,4 @@
-// Firestore Security Rules for DiagnostechAI
+// Firestore Security Rules for Ask Danny
 // Paste these into Firebase Console → Firestore → Rules tab, then Publish.
 //
 // Rule: each signed-in user can only read/write their own documents.

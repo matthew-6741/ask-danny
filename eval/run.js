@@ -18,7 +18,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const BASE = process.env.EVAL_BASE || 'https://diagnostechai.com';
+const BASE = process.env.EVAL_BASE || 'https://ask-danny-ai.com';
 const args = process.argv.slice(2);
 const opt = (flag, fallback) => {
   const i = args.indexOf(flag);
@@ -79,7 +79,7 @@ async function runJob(job) {
   try {
     res = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Origin': 'https://diagnostechai.com' },
+      headers: { 'Content-Type': 'application/json', 'Origin': 'https://ask-danny-ai.com' },
       body: JSON.stringify(body),
     });
     data = await res.json();

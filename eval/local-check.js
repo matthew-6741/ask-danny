@@ -72,7 +72,7 @@ function makeFetch(plan) {
   };
 }
 
-function evt(body, origin = 'https://diagnostechai.com') {
+function evt(body, origin = 'https://ask-danny-ai.com') {
   return { httpMethod: 'POST', headers: { origin, 'x-forwarded-for': `10.0.0.${Math.floor(Math.random() * 250)}` }, body: JSON.stringify(body) };
 }
 
@@ -429,7 +429,7 @@ const TINY_JPEG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z
       return m.exports;
     };
     const ev = (over) => ({ httpMethod: 'POST', path: '/api/subscribe',
-      headers: { origin: 'https://diagnostechai.com', 'x-forwarded-for': '10.1.1.1' },
+      headers: { origin: 'https://ask-danny-ai.com', 'x-forwarded-for': '10.1.1.1' },
       body: JSON.stringify({ email: 'sam@example.com', consent: true, source: 'test' }), ...over });
 
     const { handler } = loadWithBlobs('updates.js');
@@ -535,7 +535,7 @@ const TINY_JPEG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z
        unconf.statusCode === 503 && sends === 0, unconf.body.slice(0, 80));
 
     process.env.RESEND_API_KEY = 're_test';
-    process.env.MAIL_FROM = 'Ask Danny <updates@diagnostechai.com>';
+    process.env.MAIL_FROM = 'Ask Danny <updates@ask-danny-ai.com>';
     const real = await handler(post({ subject: 'Hello', body: 'Update.', dryRun: false }, 'test-admin-token-value'));
     ok('broadcast: sends to the one active subscriber', JSON.parse(real.body).sent === 1 && sends === 1);
     ok('broadcast: never mails someone who unsubscribed', sends === 1);

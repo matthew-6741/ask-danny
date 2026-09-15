@@ -84,7 +84,7 @@ Diagnose it any time with:
 ```bash
 cd ~/Desktop/diagnostechai-DEPLOY
 T=$(netlify env:get ADMIN_TOKEN)
-curl -s "https://diagnostechai.com/api/subscribers?diag=1" -H "x-admin-token: $T"
+curl -s "https://ask-danny-ai.com/api/subscribers?diag=1" -H "x-admin-token: $T"
 ```
 
 The functions already fall back to configuring Blobs by hand from `SITE_ID`

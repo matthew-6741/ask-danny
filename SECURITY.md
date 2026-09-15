@@ -16,7 +16,7 @@ Do not open a public GitHub issue for a security report.
 
 In scope:
 
-- `diagnostechai.com` and its Netlify Functions
+- `ask-danny-ai.com` and its Netlify Functions
 - This repository's source
 - Firestore access rules
 
@@ -36,4 +36,4 @@ Out of scope:
 
 ## Supported versions
 
-Ask Danny is a continuously deployed, pre-launch web app. Only the currently deployed version at `diagnostechai.com` is supported — there are no tagged releases to patch.
+Ask Danny is a continuously deployed, pre-launch web app. Only the currently deployed version at `ask-danny-ai.com` is supported — there are no tagged releases to patch.
