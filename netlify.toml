@@ -91,3 +91,20 @@
   from = "/api/broadcast"
   to = "/.netlify/functions/broadcast"
   status = 200
+
+# Retire the old domain. Netlify does NOT redirect domain aliases to the primary
+# on its own — aliases just render the site — so without these, the app was live
+# on two domains at once. Placed last on purpose: the /api/* rules above still
+# match first, so a page cached before the switch can keep calling the API on the
+# old host instead of being 301'd mid-POST.
+[[redirects]]
+  from = "https://diagnostechai.com/*"
+  to = "https://ask-danny-ai.com/:splat"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "https://www.diagnostechai.com/*"
+  to = "https://ask-danny-ai.com/:splat"
+  status = 301
+  force = true
