@@ -418,6 +418,8 @@ function resolveTier(body) {
 const ALLOWED_ORIGINS = [
   'https://diagnostechai.com',
   'https://www.diagnostechai.com',
+  'https://ask-danny-ai.com',
+  'https://www.ask-danny-ai.com',
   'https://ask-danny.netlify.app',
 ];
 

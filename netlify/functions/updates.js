@@ -33,6 +33,8 @@ const EMAIL_RE = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2
 const ALLOWED_ORIGINS = [
   'https://diagnostechai.com',
   'https://www.diagnostechai.com',
+  'https://ask-danny-ai.com',
+  'https://www.ask-danny-ai.com',
   'https://ask-danny.netlify.app',
 ];
 
