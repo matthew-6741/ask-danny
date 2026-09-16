@@ -26,6 +26,9 @@ const PUBLISH = [
   'index.html', '404.html', 'cookies.html', 'login.html',
   'privacy.html', 'terms.html', 'thanks.html',
   'og-image.png', 'products.json', 'robots.txt', 'sitemap.xml',
+  // Search Console ownership of https://ask-danny-ai.com/. Google re-checks it,
+  // and the Change of Address from diagnostechai.com depends on it, so leave it.
+  'googledc447d9f1b9de20b.html',
 ];
 
 // 1. Gate. A stale CSP hash blocks every script on the page, and a
