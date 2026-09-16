@@ -17,7 +17,22 @@
  */
 
 const crypto = require('crypto');
-const { getStore } = require('@netlify/blobs');
+const { getStore, setEnvironmentContext } = require('@netlify/blobs');
+
+// Installs the Blobs environment the event carries. Copied from ai-council.js,
+// which explains why this is not connectLambda(event).
+function connectBlobs(event) {
+  try {
+    const data = JSON.parse(Buffer.from(event.blobs, 'base64').toString('utf8'));
+    setEnvironmentContext({
+      deployID: event.headers['x-nf-deploy-id'],
+      siteID: event.headers['x-nf-site-id'],
+      edgeURL: data.url,
+      uncachedEdgeURL: data.url_uncached,
+      token: data.token,
+    });
+  } catch { /* no Blobs context, e.g. a local run */ }
+}
 
 const SITE = 'https://ask-danny-ai.com';
 const RESEND_URL = 'https://api.resend.com/emails';
@@ -87,6 +102,7 @@ async function sendOne(apiKey, from, to, subject, bodyText, unsubUrl) {
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 exports.handler = async (event) => {
+  connectBlobs(event);
   const headers = { 'Content-Type': 'application/json' };
   const json = (statusCode, obj) => ({ statusCode, headers, body: JSON.stringify(obj) });
 

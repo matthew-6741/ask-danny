@@ -29,21 +29,25 @@ const LIMITS = {
 // Blobs is eventually consistent, so two requests landing in the same instant
 // can both read the same count. That is an acceptable overshoot for abuse
 // deterrence; it is not a billing meter.
-const { getStore } = require('@netlify/blobs');
+const { getStore, setEnvironmentContext } = require('@netlify/blobs');
 
-// Same reason as ai-council.js: a CLI-deployed site gets no Blobs environment,
-// so this falls back to configuring it from SITE_ID plus a token.
-function blobStore(name, consistency = 'strong') {
+// Installs the Blobs environment the event carries. Copied from ai-council.js,
+// which explains why this is not connectLambda(event).
+function connectBlobs(event) {
   try {
-    return getStore({ name, consistency });
-  } catch (e) {
-    const siteID = process.env.SITE_ID || process.env.NETLIFY_SITE_ID;
-    const token  = process.env.NETLIFY_BLOBS_TOKEN
-                || process.env.NETLIFY_FUNCTIONS_TOKEN
-                || process.env.NETLIFY_API_TOKEN;
-    if (!siteID || !token) throw e;
-    return getStore({ name, consistency, siteID, token });
-  }
+    const data = JSON.parse(Buffer.from(event.blobs, 'base64').toString('utf8'));
+    setEnvironmentContext({
+      deployID: event.headers['x-nf-deploy-id'],
+      siteID: event.headers['x-nf-site-id'],
+      edgeURL: data.url,
+      uncachedEdgeURL: data.url_uncached,
+      token: data.token,
+    });
+  } catch { /* no Blobs context, e.g. a local run */ }
+}
+
+function blobStore(name, consistency = 'strong') {
+  return getStore({ name, consistency });
 }
 
 function getRateLimitKey(event, tier) {
@@ -426,6 +430,7 @@ const ALLOWED_ORIGINS = [
 ];
 
 exports.handler = async (event) => {
+  connectBlobs(event);
   // This was '*', so any website could call this endpoint from a browser and
   // spend our provider quota. The council never allowed that; the fallback
   // path did.

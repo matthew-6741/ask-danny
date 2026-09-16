@@ -19,7 +19,7 @@
  */
 
 const crypto = require('crypto');
-const { getStore } = require('@netlify/blobs');
+const { getStore, setEnvironmentContext } = require('@netlify/blobs');
 
 const SUBSCRIBE_LIMIT = 5;        // per IP
 const SUBSCRIBE_WINDOW = 3600;    // per hour
@@ -56,22 +56,23 @@ function corsFor(event) {
   };
 }
 
-// Netlify injects the Blobs environment during its own build. This site is
-// deployed from the CLI, which does not, so getStore() throws
-// MissingBlobsEnvironmentError and every write silently fails. The runtime does
-// still provide SITE_ID and NETLIFY_FUNCTIONS_TOKEN, which is enough to
-// configure it by hand.
-function blobStore(name, consistency = 'strong') {
+// Installs the Blobs environment the event carries. Copied from ai-council.js,
+// which explains why this is not connectLambda(event).
+function connectBlobs(event) {
   try {
-    return getStore({ name, consistency });
-  } catch (e) {
-    const siteID = process.env.SITE_ID || process.env.NETLIFY_SITE_ID;
-    const token  = process.env.NETLIFY_BLOBS_TOKEN
-                || process.env.NETLIFY_FUNCTIONS_TOKEN
-                || process.env.NETLIFY_API_TOKEN;
-    if (!siteID || !token) throw e;
-    return getStore({ name, consistency, siteID, token });
-  }
+    const data = JSON.parse(Buffer.from(event.blobs, 'base64').toString('utf8'));
+    setEnvironmentContext({
+      deployID: event.headers['x-nf-deploy-id'],
+      siteID: event.headers['x-nf-site-id'],
+      edgeURL: data.url,
+      uncachedEdgeURL: data.url_uncached,
+      token: data.token,
+    });
+  } catch { /* no Blobs context, e.g. a local run */ }
+}
+
+function blobStore(name, consistency = 'strong') {
+  return getStore({ name, consistency });
 }
 
 function store() {
@@ -152,6 +153,7 @@ const html = (statusCode, body) => ({
 });
 
 exports.handler = async (event) => {
+  connectBlobs(event);
   const cors = corsFor(event);
   if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: cors, body: '' };
 
@@ -214,6 +216,12 @@ exports.handler = async (event) => {
     if ((event.queryStringParameters || {}).diag) {
       const probe = { at: new Date().toISOString() };
       const steps = {};
+      // Field names only, never values: the payload holds a Blobs token.
+      try {
+        steps.contextFields = event.blobs
+          ? Object.keys(JSON.parse(Buffer.from(event.blobs, 'base64').toString('utf8'))).join(',')
+          : 'none';
+      } catch (e) { steps.contextFields = `unreadable: ${e.name}`; }
 
       try {
         const t = store();
@@ -222,6 +230,10 @@ exports.handler = async (event) => {
         steps.write = 'ok';
         const back = await t.get('__diag', { type: 'json' });
         steps.read = back && back.at === probe.at ? 'ok' : `mismatch: ${JSON.stringify(back)}`;
+        // This is the real subscriber store, so the probe must not stay behind
+        // and show up in the export as a subscriber.
+        await t.delete('__diag');
+        steps.delete = 'ok';
         const { blobs } = await t.list();
         steps.list = `${blobs.length} keys`;
       } catch (e) {

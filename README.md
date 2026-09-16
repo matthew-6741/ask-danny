@@ -77,7 +77,7 @@ Architecture is easy to add and hard to justify. The thing that actually tells y
 |---|---|
 | `eval/jobs.json` | 58 jobs phrased as real people speak, 13 of them traps |
 | `eval/run.js` | Runs them against the live API, writes a CSV with columns for a tradesperson to grade |
-| `eval/local-check.js` | 85 checks against mocked providers — run before every deploy |
+| `eval/local-check.js` | 95 checks against mocked providers — every deploy runs them and stops on a failure |
 
 The traps are the interesting part: a gas smell must refuse rather than sell parts, an AC that won't cool must reach for the capacitor and not refrigerant, a humming disposal needs a jam wrench and not a new unit, a load-bearing wall needs an engineer, and a prompt injection must produce a normal list and leak nothing.
 
@@ -89,7 +89,7 @@ The traps are the interesting part: a gas smell must refuse rather than sell par
 - **The system prompt is owned by the server.** Both endpoints previously accepted `body.system` and forwarded it, which let anyone replace the instructions wholesale — safety rules included. It is now read and discarded.
 - **CORS is an allowlist**, on both endpoints. `/api/ai` was `*`, which let any website spend our provider quota from a browser.
 - **Verified aisles come from our own data.** The client used to post `verifiedAisles` and the server trusted them, so a crafted request could assert any aisle it liked.
-- Per-IP rate limiting is built on Netlify Blobs but **does not enforce yet**: this site deploys from the CLI, which gets no Blobs environment, so writes fail and the limiter fails open. It starts working once `NETLIFY_BLOBS_TOKEN` is set.
+- **Per-IP rate limiting** is stored in Netlify Blobs. Until September 2026 it silently enforced nothing. These are Lambda-compatibility functions, which get no Blobs environment unless the handler installs it from the request, and the library's own `connectLambda` drops the URL that strong-consistency reads need. Each handler now installs it itself, and `local-check.js` tests that.
 - Input sanitisation, and a token cap enforced against the plan rather than the request.
 - Firestore rules restrict every document to its owner and cap field sizes.
 - `netlify.toml` sets HSTS, `X-Frame-Options: DENY`, `nosniff`, a strict referrer policy, and a permissions policy denying camera, payment, USB and motion sensors.

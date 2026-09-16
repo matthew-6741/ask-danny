@@ -69,41 +69,49 @@ Paste `firestore.rules` into Firebase Console → Firestore → Rules tab.
 Repo at `/Users/sanchez/diagnostech-trade/` (branch: main)
 Latest commit: security hardening (proxy, CSP, rate limiting, Firestore rules)
 
-## Netlify Blobs is not configured (rate limiting is failing open)
+## Netlify Blobs (rate limits, subscriber list, video cache)
 
-`getStore()` throws `MissingBlobsEnvironmentError` in production. Netlify
-injects the Blobs environment during its own build; this site is deployed from
-the CLI, which does not. Every caller catches and carries on, so **persistent
-rate limiting has never actually enforced anything** — the free-tier 5/day cap
-is not being applied, and the video-evidence cache never stored a thing. It
-looked healthy because the council still returns a `remaining` count; that
-count just never decrements.
+Working since 2026-09-16. Before that it had never worked: every caller catches
+and carries on, so rate limiting failed open silently and the council's
+`remaining` count never went down.
+
+All four functions are Lambda-compatibility handlers (`exports.handler`), and
+Netlify does not give those the Blobs environment automatically. The request
+carries it (`event.blobs`, base64 JSON with `url`, `url_uncached` and `token`),
+and `connectBlobs(event)` at the top of each handler installs it. **Do not swap
+that for the library's `connectLambda(event)`**: it drops `url_uncached`, and
+every strong-consistency call then throws `BlobsConsistencyError` (still true in
+@netlify/blobs 11.1.0). The helper is copied into all four files, and
+`eval/local-check.js` tests each copy.
+
+The explanation that used to be here was wrong: CLI deploys lacking Blobs, fixed
+by setting `NETLIFY_BLOBS_TOKEN` or linking GitHub. Linking GitHub changed
+nothing, and no token is needed. Don't create one.
 
 Diagnose it any time with:
 
 ```bash
-cd ~/Desktop/diagnostechai-DEPLOY
+cd ~/diagnostech-trade
 T=$(netlify env:get ADMIN_TOKEN)
 curl -s "https://ask-danny-ai.com/api/subscribers?diag=1" -H "x-admin-token: $T"
 ```
 
-The functions already fall back to configuring Blobs by hand from `SITE_ID`
-plus a token. `SITE_ID` is provided by the runtime; the token is not.
-`NETLIFY_FUNCTIONS_TOKEN` is present but Blobs rejects it with a 401. **To fix,
-set `NETLIFY_BLOBS_TOKEN` to a Netlify personal access token** (User settings →
-Applications → New access token), and everything starts working with no code
-change.
+Healthy output shows `write`, `read` and `delete` as `ok`. `contextFields` lists
+the payload's field names, never their values. If `url_uncached` ever drops out
+of that list, strong consistency breaks again.
 
-The better long-term fix is to connect the GitHub repo to Netlify for CI
-deploys, which configures Blobs automatically and also avoids the publish
-workaround below.
+Sign-ups before 2026-09-16 got a 503 from `/api/subscribe`, so the page fell
+back to Netlify Forms. Any of those are under Forms in the Netlify dashboard,
+not in Blobs.
 
 ## Deploying
 
-Deploys run **from this repo**. `scripts/build.js` runs `eval/local-check.js`
-(85 checks), refuses to publish if any fail, then copies an explicit allowlist
-of 11 site files into `dist/`, which is what Netlify publishes. Functions deploy
-separately from `netlify/functions/`.
+The site has been linked to GitHub (`matthew-6741/ask-danny`, branch `main`)
+since 2026-09-16. **Pushing to `main` deploys to production.** Netlify runs
+`scripts/build.js`, which runs `eval/local-check.js` (95 checks) and fails the
+build if any fail. It then copies an explicit allowlist of 11 site files into
+`dist/`, which is what gets published. Functions deploy from
+`netlify/functions/`.
 
 **Do not deploy from `~/Desktop/diagnostechai-DEPLOY/`.** That folder is retired.
 It published everything in it: server function source, package.json and stale
@@ -114,26 +122,28 @@ build fail on purpose; add it to the list.
 
 `git pull` first — another session has pushed to this repo mid-work before.
 
+To try a change before it ships, upload a draft. It gets its own URL and does
+not touch production. Drafts share production's Blobs stores, though, so rate
+limit counts and list writes made on a draft are real.
+
 ```bash
 cd ~/diagnostech-trade && git pull --no-edit
 npm ci                                   # deps live at the repo root now
 node scripts/build.js                    # checks, then dist/
 netlify deploy --dir dist --functions netlify/functions   # prints a draft URL
+```
+
+Then push to `main` to ship it. `netlify deploy --prod` fails with
+`JSONHTTPError: Forbidden` on this account (the upload succeeds and only the
+publish call is refused). If a CLI draft ever has to go live without a push,
+promote it, knowing the next push to `main` replaces it:
+
+```bash
 SITE=$(python3 -c 'import json;print(json.load(open(".netlify/state.json"))["siteId"])')
 DEPLOY=<id from the draft URL, the part before --ask-danny>
 netlify api restoreSiteDeploy --data "{\"site_id\":\"$SITE\",\"deploy_id\":\"$DEPLOY\"}"
 ```
 
-`netlify deploy --prod` fails with `JSONHTTPError: Forbidden` on this account —
-the upload succeeds and only the final publish call is refused — hence draft
-then promote.
-
-**Linking GitHub for continuous deployment** is intended but was not completed
-as of 2026-09-16 (the site's `build_settings.repo_url` is still empty). Once it
-is, `netlify.toml` already tells Netlify to run `node scripts/build.js` and publish
-`dist/`, so pushing to `main` deploys with the same check gate. It should also fix
-Netlify Blobs, which forum reports say fails on CLI deploys specifically.
-
-After deploying, verify on the draft before promoting: the site says "Ask
-Danny", `/netlify/functions/ai-council.js` and `/package.json` return 404, and
-`/api/council` returns items.
+After deploying, verify: the site says "Ask Danny",
+`/netlify/functions/ai-council.js` and `/package.json` return 404,
+`/api/council` returns items, and the Blobs diag above reports `ok`.

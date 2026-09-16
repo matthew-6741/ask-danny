@@ -38,7 +38,7 @@ const ok = (name, cond, detail) => {
 };
 
 // ── Load a handler with a scripted fetch ─────────────────────────────
-function load(file, fetchImpl) {
+function load(file, fetchImpl, overrides = {}) {
   const src = fs.readFileSync(path.join(SRC, file), 'utf8');
   const mod = { exports: {} };
   const fn = new Function('module', 'exports', 'process', 'fetch', 'require', '__dirname', src);
@@ -48,7 +48,8 @@ function load(file, fetchImpl) {
   // quietly loaded that folder's top-level copy instead of the one the function
   // actually ships with — the tests passed by accident.
   const fileRequire = createRequire(path.join(SRC, file));
-  const req = id => (id.startsWith('.') || id.startsWith('/')) ? fileRequire(id) : depRequire(id);
+  const req = id => overrides[id]
+    || ((id.startsWith('.') || id.startsWith('/')) ? fileRequire(id) : depRequire(id));
   fn(mod, mod.exports, process, fetchImpl, req, SRC);
   return mod.exports;
 }
@@ -582,6 +583,57 @@ const TINY_JPEG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z
        (scriptSrc.match(/'sha256-[^']+'/g) || []).every(h => want.includes(h)));
   }
 
+
+  // Blobs. These are Lambda-compatibility handlers (exports.handler), which
+  // are not given the Blobs environment: the event carries it and the handler
+  // has to install it. Without that, getStore() throws on every request and rate
+  // limiting fails open with nothing in the logs. It was misread for months as a
+  // CLI-deploy problem. The library's own connectLambda(event) is not enough
+  // either: it drops url_uncached, so every strong-consistency call throws.
+  {
+    const connected = [];
+    const mem = new Map();
+    const fakeBlobs = {
+      setEnvironmentContext: (ctx) => { connected.push(ctx); },
+      getStore: () => ({
+        get: async (k) => mem.has(k) ? JSON.parse(mem.get(k)) : null,
+        setJSON: async (k, v) => { mem.set(k, JSON.stringify(v)); },
+        delete: async (k) => { mem.delete(k); },
+        list: async () => ({ blobs: [...mem.keys()].map(key => ({ key })) }),
+      }),
+    };
+    const noNetwork = async () => { throw new Error('no network'); };
+    const overrides = { '@netlify/blobs': fakeBlobs };
+
+    // The same shape Netlify sends (field names confirmed on a live deploy).
+    const payload = { primary_region: 'us-east-2', url: 'https://edge.example/',
+      url_uncached: 'https://uncached.example/', token: 'tok' };
+    const blobs = Buffer.from(JSON.stringify(payload)).toString('base64');
+
+    for (const file of ['ai-council.js', 'ai-proxy.js', 'updates.js', 'broadcast.js']) {
+      connected.length = 0;
+      const { handler } = load(file, noNetwork, overrides);
+      const e = { httpMethod: 'OPTIONS', path: '/api/x', blobs,
+        headers: { origin: 'https://ask-danny-ai.com', 'x-nf-site-id': 'site-1', 'x-nf-deploy-id': 'dep-1' } };
+      try { await handler(e); } catch { /* only the connect call is under test */ }
+      const ctx = connected[0] || {};
+      ok(`blobs: ${file} installs the Blobs environment from the event`,
+         ctx.edgeURL === payload.url && ctx.token === payload.token && ctx.siteID === 'site-1', JSON.stringify(ctx));
+      ok(`blobs: ${file} keeps the uncached URL strong consistency needs`,
+         ctx.uncachedEdgeURL === payload.url_uncached, JSON.stringify(ctx));
+    }
+
+    // The diag probe writes into the real subscriber store. Now that writes
+    // succeed, a probe left behind would count as a subscriber in the export.
+    process.env.ADMIN_TOKEN = 'test-admin-token-value';
+    const { handler } = load('updates.js', noNetwork, overrides);
+    const diag = await handler({ httpMethod: 'GET', path: '/api/subscribers',
+      queryStringParameters: { diag: '1' }, headers: { 'x-admin-token': 'test-admin-token-value' } });
+    const steps = JSON.parse(diag.body).diag || {};
+    ok('blobs: diag round trip reports ok', steps.write === 'ok' && steps.read === 'ok', JSON.stringify(steps));
+    ok('blobs: diag leaves no probe record in the subscriber list', mem.size === 0, [...mem.keys()].join(','));
+    delete process.env.ADMIN_TOKEN;
+  }
 
   console.log('─────────────────────────────────────────────');
   console.log(`  ${pass} passed, ${fail} failed`);

@@ -147,26 +147,36 @@ const STAGE_TIMEOUT_MS  = OPINION_BUDGET_MS;
 // Blobs is eventually consistent, so two requests landing in the same instant
 // can both read the same count. That is an acceptable overshoot for abuse
 // deterrence; it is not a billing meter.
-const { getStore } = require('@netlify/blobs');
+const { getStore, setEnvironmentContext } = require('@netlify/blobs');
 
-// Netlify injects the Blobs environment during its own build. This site is
-// deployed from the CLI, which does not, so getStore() throws
-// MissingBlobsEnvironmentError — and because every caller here catches and
-// carries on, persistent rate limiting has been failing open silently rather
-// than enforcing anything. The runtime does provide SITE_ID, so all that is
-// missing is a token: set NETLIFY_BLOBS_TOKEN to a Netlify personal access
-// token and this starts working with no further change.
-function blobStore(name, consistency = 'strong') {
+// This is a Lambda-compatibility function (exports.handler), and those are not
+// given the Blobs environment automatically. The event carries it, and
+// connectBlobs(event) at the top of the handler installs it. Without that,
+// getStore() throws, and because every caller here catches and carries on,
+// persistent rate limiting failed open silently. That was misread for months as
+// a CLI-deploy problem, and a token fallback here only turned the clear error
+// into a misleading 401.
+//
+// The library's own connectLambda(event) does this too, but it drops
+// url_uncached, and every strong-consistency request then throws
+// BlobsConsistencyError (checked through @netlify/blobs 11.1.0). So the context
+// is built by hand, with it. The same helper is copied into ai-proxy.js,
+// updates.js and broadcast.js; eval/local-check.js tests all four.
+function connectBlobs(event) {
   try {
-    return getStore({ name, consistency });
-  } catch (e) {
-    const siteID = process.env.SITE_ID || process.env.NETLIFY_SITE_ID;
-    const token  = process.env.NETLIFY_BLOBS_TOKEN
-                || process.env.NETLIFY_FUNCTIONS_TOKEN
-                || process.env.NETLIFY_API_TOKEN;
-    if (!siteID || !token) throw e;
-    return getStore({ name, consistency, siteID, token });
-  }
+    const data = JSON.parse(Buffer.from(event.blobs, 'base64').toString('utf8'));
+    setEnvironmentContext({
+      deployID: event.headers['x-nf-deploy-id'],
+      siteID: event.headers['x-nf-site-id'],
+      edgeURL: data.url,
+      uncachedEdgeURL: data.url_uncached,
+      token: data.token,
+    });
+  } catch { /* no Blobs context, e.g. a local run */ }
+}
+
+function blobStore(name, consistency = 'strong') {
+  return getStore({ name, consistency });
 }
 
 function getRateLimitKey(event, tier) {
@@ -1181,6 +1191,7 @@ function recordFailure(id) {
 // ── Handler ──────────────────────────────────────────────────────────
 
 exports.handler = async (event) => {
+  connectBlobs(event);
   const startedAt = Date.now();
   const msLeft = () => TOTAL_BUDGET_MS - (Date.now() - startedAt);
   // Only our own front-ends. A wildcard let any site call this endpoint from a
