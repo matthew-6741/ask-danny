@@ -6,7 +6,7 @@ AI-powered trade assistant. User describes a job → AI returns a one-trip mater
 ## Key files
 - `index.html` — entire app (single file, ~2200 lines)
 - `products.json` — 181-item local product DB used for RAG injection into AI prompts
-- `/Users/sanchez/diagnostech-deploy/` — Netlify deploy folder (copy of both files + netlify.toml + Netlify Function)
+- `~/Desktop/diagnostechai-DEPLOY/` — Netlify deploy folder (copy of both files + netlify.toml + Netlify Function)
 
 ## Architecture
 - Plain HTML/CSS/JS, no framework
@@ -61,7 +61,7 @@ MATERIALS:
 ```
 
 ## Deploy
-Drag `/Users/sanchez/diagnostech-deploy/` to app.netlify.com/drop.
+Drag `~/Desktop/diagnostechai-DEPLOY/` to app.netlify.com/drop.
 Set env var `ANTHROPIC_API_KEY` in Netlify site settings before going live.
 Paste `firestore.rules` into Firebase Console → Firestore → Rules tab.
 
@@ -128,7 +128,7 @@ The publish API itself works, so deploy as a draft and then promote it:
 cd ~/Desktop/diagnostechai-DEPLOY
 netlify deploy --dir . --functions netlify/functions      # prints a draft URL
 SITE=$(python3 -c 'import json;print(json.load(open(".netlify/state.json"))["siteId"])')
-DEPLOY=<id from the draft URL, the part before --diagnostech>
+DEPLOY=<id from the draft URL, the part before --ask-danny>
 netlify api restoreSiteDeploy --data "{\"site_id\":\"$SITE\",\"deploy_id\":\"$DEPLOY\"}"
 ```
 

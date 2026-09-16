@@ -14,7 +14,7 @@ Getting both is better (photos route to Gemini automatically).
 
 **Groq** — https://console.groq.com/keys
 1. Sign in with Google
-2. "Create API Key" → name it `diagnostechai`
+2. "Create API Key" → name it `ask-danny`
 3. Copy it (starts with `gsk_`)
 
 **Gemini** — https://aistudio.google.com/apikey
@@ -27,7 +27,7 @@ Getting both is better (photos route to Gemini automatically).
 ### 2. Deploy with the key set (5 min)
 
 1. Go to https://app.netlify.com/drop
-2. Drag the **`diagnostech-deploy`** folder onto the page
+2. Drag the **`diagnostechai-DEPLOY`** folder (on the Desktop) onto the page
 3. Once deployed: **Site configuration → Environment variables → Add a variable**
    - Key: `GROQ_API_KEY`   Value: your `gsk_...` key
    - and/or `GEMINI_API_KEY`  Value: your `AIza...` key
