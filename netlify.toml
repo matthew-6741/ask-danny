@@ -5,8 +5,11 @@
   directory = "netlify/functions"
   node_bundler = "esbuild"
 
+# Publish a built allowlist, not the whole folder. scripts/build.js runs the
+# pre-deploy checks first and refuses to publish if they fail.
 [build]
-  publish = "."
+  command = "node scripts/build.js"
+  publish = "dist"
   functions = "netlify/functions"
 
 [[headers]]

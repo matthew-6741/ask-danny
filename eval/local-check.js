@@ -21,11 +21,15 @@ const SRC = path.join(__dirname, '..', 'netlify', 'functions');
 // script, so resolve requires from there. EVAL_DEPS overrides the location.
 const { createRequire } = require('module');
 const DEPS_DIR = process.env.EVAL_DEPS ||
-  path.join(process.env.HOME, 'Desktop', 'diagnostechai-DEPLOY');
+  path.join(process.env.HOME || '', 'Desktop', 'diagnostechai-DEPLOY');
 let depRequire = require;
-try {
+// Dependencies install at the repo root now (npm ci), which plain require finds.
+// The old Desktop deploy folder is only used if it exists and the root does not
+// have them. createRequire never throws for a missing path, so check explicitly.
+if (!fs.existsSync(path.join(__dirname, '..', 'node_modules', '@netlify', 'blobs'))
+    && fs.existsSync(path.join(DEPS_DIR, 'node_modules', '@netlify', 'blobs'))) {
   depRequire = createRequire(path.join(DEPS_DIR, 'package.json'));
-} catch { /* fall back to our own resolver */ }
+}
 let pass = 0, fail = 0;
 const failures = [];
 const ok = (name, cond, detail) => {
@@ -38,7 +42,14 @@ function load(file, fetchImpl) {
   const src = fs.readFileSync(path.join(SRC, file), 'utf8');
   const mod = { exports: {} };
   const fn = new Function('module', 'exports', 'process', 'fetch', 'require', '__dirname', src);
-  fn(mod, mod.exports, process, fetchImpl, depRequire, SRC);
+  // Resolve the function's own relative requires (./products.json) against the
+  // function's directory, exactly as Netlify does. This used to go through
+  // depRequire, rooted at the old Desktop deploy folder, so './products.json'
+  // quietly loaded that folder's top-level copy instead of the one the function
+  // actually ships with — the tests passed by accident.
+  const fileRequire = createRequire(path.join(SRC, file));
+  const req = id => (id.startsWith('.') || id.startsWith('/')) ? fileRequire(id) : depRequire(id);
+  fn(mod, mod.exports, process, fetchImpl, req, SRC);
   return mod.exports;
 }
 
