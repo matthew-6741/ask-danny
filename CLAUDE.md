@@ -61,7 +61,7 @@ MATERIALS:
 ```
 
 ## Deploy
-Drag `~/Desktop/diagnostechai-DEPLOY/` to app.netlify.com/drop.
+See **Deploying** below. The Desktop deploy folder and drag-and-drop are retired.
 Set env var `ANTHROPIC_API_KEY` in Netlify site settings before going live.
 Paste `firestore.rules` into Firebase Console → Firestore → Rules tab.
 
@@ -100,38 +100,40 @@ workaround below.
 
 ## Deploying
 
-**Sync every site file first, not just the ones you edited.** The deploy folder
-is a separate copy, so anything not copied across is *removed from the live
-site* on the next deploy. This is not hypothetical: a deploy of only
-`index.html` and the functions took someone else's `cookies.html` off
-production (404) and dropped its footer link, because those files existed in
-git but had never been copied to the deploy folder.
+Deploys run **from this repo**. `scripts/build.js` runs `eval/local-check.js`
+(85 checks), refuses to publish if any fail, then copies an explicit allowlist
+of 11 site files into `dist/`, which is what Netlify publishes. Functions deploy
+separately from `netlify/functions/`.
 
-`git pull` before deploying, too. Another session pushed nine commits to this
-repo while work was in progress here, and deploying without merging them
-reverted their work on the live site.
+**Do not deploy from `~/Desktop/diagnostechai-DEPLOY/`.** That folder is retired.
+It published everything in it: server function source, package.json and stale
+Sept 6 copies of the API code were all publicly readable on the product domain.
+Its manual copy step also once removed `cookies.html` from production. A new
+root-level page that is not in the `PUBLISH` list in `scripts/build.js` makes the
+build fail on purpose; add it to the list.
+
+`git pull` first — another session has pushed to this repo mid-work before.
 
 ```bash
 cd ~/diagnostech-trade && git pull --no-edit
-for f in $(git ls-files | grep -E '\.(html|xml|txt|json)$' | grep -v eval/); do
-  cp "$f" ~/Desktop/diagnostechai-DEPLOY/"$f"
-done
-cp netlify/functions/*.js ~/Desktop/diagnostechai-DEPLOY/netlify/functions/
-```
-
-
-`netlify deploy --prod` fails with `JSONHTTPError: Forbidden` on this account —
-the upload succeeds (three 200s) and only the final publish call is refused.
-The publish API itself works, so deploy as a draft and then promote it:
-
-```bash
-cd ~/Desktop/diagnostechai-DEPLOY
-netlify deploy --dir . --functions netlify/functions      # prints a draft URL
+npm ci                                   # deps live at the repo root now
+node scripts/build.js                    # checks, then dist/
+netlify deploy --dir dist --functions netlify/functions   # prints a draft URL
 SITE=$(python3 -c 'import json;print(json.load(open(".netlify/state.json"))["siteId"])')
 DEPLOY=<id from the draft URL, the part before --ask-danny>
 netlify api restoreSiteDeploy --data "{\"site_id\":\"$SITE\",\"deploy_id\":\"$DEPLOY\"}"
 ```
 
-Verify by checking the site says "Ask Danny", then run `node eval/local-check.js`
-before any deploy — it invokes both handlers against mocked providers and has
-caught two ReferenceErrors that `node --check` could not see.
+`netlify deploy --prod` fails with `JSONHTTPError: Forbidden` on this account —
+the upload succeeds and only the final publish call is refused — hence draft
+then promote.
+
+**Linking GitHub for continuous deployment** is intended but was not completed
+as of 2026-09-16 (the site's `build_settings.repo_url` is still empty). Once it
+is, `netlify.toml` already tells Netlify to run `node scripts/build.js` and publish
+`dist/`, so pushing to `main` deploys with the same check gate. It should also fix
+Netlify Blobs, which forum reports say fails on CLI deploys specifically.
+
+After deploying, verify on the draft before promoting: the site says "Ask
+Danny", `/netlify/functions/ai-council.js` and `/package.json` return 404, and
+`/api/council` returns items.
