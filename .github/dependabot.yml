@@ -1,6 +1,8 @@
 # Dependabot opens pull requests when a dependency or workflow action has a
-# newer version, checked monthly: each open PR used to cost a Netlify preview build. Security updates are what matter here: @netlify/blobs handles
-# the subscriber list, and a compromised GitHub action could read repo secrets.
+# newer version. Monthly, not weekly: each PR also triggers a Netlify preview
+# build, and those spend credits. Security updates are what matter here:
+# @netlify/blobs handles the subscriber list, and a compromised GitHub action
+# could read repo secrets.
 version: 2
 updates:
   - package-ecosystem: npm
