@@ -54,7 +54,7 @@ jobs:
       - name: npm audit (production dependencies)
         run: npm audit --omit=dev --audit-level=high
       - name: OSV-Scanner
-        uses: google/osv-scanner-action/osv-scanner-action@v2.2.2
+        uses: google/osv-scanner-action/osv-scanner-action@v2.6.0
         with:
           scan-args: |-
             --lockfile=package-lock.json
