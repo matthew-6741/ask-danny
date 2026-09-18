@@ -19,6 +19,27 @@
 const crypto = require('crypto');
 const { getStore, setEnvironmentContext } = require('@netlify/blobs');
 
+// Addresses are stored encrypted when LIST_KEY is set; see updates.js, which
+// writes them. Without the key this returns null and that subscriber is
+// skipped rather than mailed blind.
+function readEmail(rec) {
+  if (!rec) return null;
+  if (rec.email) return rec.email;
+  if (!rec.emailEnc) return null;
+  const raw = process.env.LIST_KEY;
+  if (!raw) return null;
+  const key = Buffer.from(raw, 'base64');
+  if (key.length !== 32) return null;
+  try {
+    const buf = Buffer.from(rec.emailEnc, 'base64');
+    const decipher = crypto.createDecipheriv('aes-256-gcm', key, buf.subarray(0, 12));
+    decipher.setAuthTag(buf.subarray(12, 28));
+    return Buffer.concat([decipher.update(buf.subarray(28)), decipher.final()]).toString('utf8');
+  } catch {
+    return null;
+  }
+}
+
 // Installs the Blobs environment the event carries. Copied from ai-council.js,
 // which explains why this is not connectLambda(event).
 function connectBlobs(event) {
@@ -58,17 +79,17 @@ function render(bodyText, unsubUrl) {
     `<p style="margin:0 0 16px;line-height:1.6">${escapeHtml(p.trim()).replace(/\n/g, '<br>')}</p>`
   ).join('');
 
-  return `<!doctype html><html><body style="margin:0;background:#faf9f5;padding:24px;
-font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1a1a18">
-<div style="max-width:560px;margin:0 auto;background:#fff;border:1px solid #e4e3dc;
-border-radius:14px;padding:32px">
-  <div style="font-weight:700;font-size:18px;margin-bottom:22px">Ask Danny</div>
+  return `<!doctype html><html><body style="margin:0;background:#faf8f5;padding:24px;
+font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#000">
+<div style="max-width:560px;margin:0 auto;background:#fff;border:1px solid #d1d1cd;
+border-radius:16px;padding:32px">
+  <div style="font-weight:500;font-size:16px;margin-bottom:22px">Ask Danny</div>
   ${paras}
-  <hr style="border:0;border-top:1px solid #e4e3dc;margin:28px 0 16px">
-  <p style="margin:0;font-size:12px;color:#7a7a72;line-height:1.5">
+  <hr style="border:0;border-top:1px solid #d1d1cd;margin:28px 0 16px">
+  <p style="margin:0;font-size:12px;color:#72706b;line-height:1.5">
     You are getting this because you signed up for Ask Danny updates at
-    <a href="${SITE}" style="color:#7a7a72">ask-danny-ai.com</a>.<br>
-    <a href="${unsubUrl}" style="color:#7a7a72">Unsubscribe</a> — one click, takes effect immediately.
+    <a href="${SITE}" style="color:#72706b">ask-danny-ai.com</a>.<br>
+    <a href="${unsubUrl}" style="color:#72706b">Unsubscribe</a> — one click, takes effect immediately.
   </p>
 </div></body></html>`;
 }
@@ -131,9 +152,8 @@ exports.handler = async (event) => {
     const { blobs } = await s.list();
     for (const b of blobs) {
       const rec = await s.get(b.key, { type: 'json' });
-      if (rec && rec.status === 'subscribed' && rec.email) {
-        recipients.push({ email: rec.email, unsubToken: rec.unsubToken });
-      }
+      const email = rec && rec.status === 'subscribed' ? readEmail(rec) : null;
+      if (email) recipients.push({ email, unsubToken: rec.unsubToken });
     }
   } catch { return json(503, { error: 'Could not read the subscriber list.' }); }
 

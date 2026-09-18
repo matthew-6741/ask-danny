@@ -25,7 +25,7 @@ const out = path.join(root, 'dist');
 const PUBLISH = [
   'index.html', '404.html', 'cookies.html', 'login.html',
   'privacy.html', 'terms.html', 'thanks.html',
-  'og-image.png', 'products.json', 'robots.txt', 'sitemap.xml',
+  'og-image.png', 'products.json', 'robots.txt',
   // Search Console ownership of https://ask-danny-ai.com/. Google re-checks it,
   // and the Change of Address from diagnostechai.com depends on it, so leave it.
   'googledc447d9f1b9de20b.html',
@@ -51,4 +51,24 @@ if (unlisted.length) {
 fs.rmSync(out, { recursive: true, force: true });
 fs.mkdirSync(out, { recursive: true });
 for (const f of PUBLISH) fs.copyFileSync(path.join(root, f), path.join(out, f));
-console.log(`\nPublished ${PUBLISH.length} files to dist/.`);
+
+// 3. Repair guides and the sitemap are generated from content/guides.js, so
+//    a new guide cannot be published without also being listed in the sitemap.
+const pages = require('./pages');
+const generated = pages.render();
+for (const { file, html } of generated) {
+  fs.mkdirSync(path.dirname(path.join(out, file)), { recursive: true });
+  fs.writeFileSync(path.join(out, file), html);
+}
+fs.writeFileSync(path.join(out, 'sitemap.xml'), pages.sitemap());
+
+const MARKER = '<!-- GUIDE_LINKS: filled in by scripts/build.js from content/guides.js -->';
+const indexFile = path.join(out, 'index.html');
+const indexHtml = fs.readFileSync(indexFile, 'utf8');
+if (indexHtml.split(MARKER).length !== 2) {
+  console.error('\nBuild stopped: index.html must contain the GUIDE_LINKS marker exactly once.');
+  process.exit(1);
+}
+fs.writeFileSync(indexFile, indexHtml.replace(MARKER, pages.landingLinks()));
+
+console.log(`\nPublished ${PUBLISH.length} files, ${generated.length} generated pages and sitemap.xml to dist/.`);

@@ -5,37 +5,36 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wrong aisle — Ask Danny</title>
 <meta name="robots" content="noindex">
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg:#f4f3ef; --surface:#fff; --border:#e4e3dc; --text:#1a1a18;
-  --muted:#7a7a72; --accent:#E85B2A; --accent-light:#fdf0eb;
+  --bg:#faf8f5; --surface:#fff; --border:#d1d1cd; --text:#000;
+  --muted:#72706b; --accent:#016a71; --accent-light:#e6f0f0; --ink:#27251e; --subtle:#e8e6e1; --radius:16px; --radius-input:12px; --pill:9999px;
 }
 * { box-sizing:border-box; margin:0; padding:0; }
 body {
-  font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text);
+  font-family:'DM Sans',ui-sans-serif,system-ui,sans-serif; background:var(--bg); color:var(--text);
   min-height:100vh; display:flex; align-items:center; justify-content:center;
   padding:24px; text-align:center;
 }
 .card {
   background:var(--surface); border:1px solid var(--border);
-  border-radius:16px; padding:44px 34px; max-width:440px; width:100%;
+  border-radius:var(--radius); padding:44px 34px; max-width:440px; width:100%;
 }
 .sign {
   display:inline-block; background:var(--accent-light); color:var(--accent);
   border:1px dashed var(--accent); border-radius:10px;
-  padding:8px 16px; font-size:12px; font-weight:600;
-  letter-spacing:1px; margin-bottom:22px;
+  padding:8px 16px; font-size:12px; font-weight:500; margin-bottom:22px;
 }
-.code { font-family:'Bebas Neue',sans-serif; font-size:76px; line-height:1; color:var(--accent); }
-h1 { font-size:19px; font-weight:600; margin:10px 0 8px; }
+.code { font-family:'DM Sans',ui-sans-serif,system-ui,sans-serif; font-weight:500; font-size:48px; line-height:1; color:var(--accent); }
+h1 { font-size:24px; font-weight:500; margin:10px 0 8px; }
 p { font-size:14px; color:var(--muted); line-height:1.6; margin-bottom:24px; }
 .btn {
-  display:block; width:100%; padding:13px; border-radius:10px;
+  display:block; width:100%; padding:13px; border-radius:var(--pill);
   text-decoration:none; font-size:14px; font-weight:500; margin-bottom:9px;
 }
 .primary { background:var(--accent); color:#fff; }
-.primary:hover { background:#d24d1f; }
+.primary:hover { background:#000; }
 .secondary { background:transparent; color:var(--muted); border:1px solid var(--border); }
 .secondary:hover { border-color:var(--accent); color:var(--accent); }
 </style>

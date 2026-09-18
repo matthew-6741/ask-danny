@@ -104,11 +104,41 @@ Sign-ups before 2026-09-16 got a 503 from `/api/subscribe`, so the page fell
 back to Netlify Forms. Any of those are under Forms in the Netlify dashboard,
 not in Blobs.
 
+## Public pages and search
+
+The app is one page behind a sign-in screen, which Google indexed as a thin
+login page. Two things fixed that, and both are generated or checked at build:
+
+- **A landing page** in `index.html` (`#landing`), shown to first-time visitors
+  and crawlers. Its form is a plain GET to `/`, so it works without JavaScript;
+  the app reads `?job=` and `?trade=` and fills the job in. Returning visitors
+  never see it: a pre-paint script adds `.skip-landing` when the AI
+  acknowledgement key is already set.
+- **Repair guides** under `/repairs/`, written in `content/guides.js` and
+  rendered by `scripts/pages.js`. Each guide links into the app with wording
+  copied from a job in `eval/jobs.json`, and the checks fail if that wording is
+  not an eval job. The sitemap and the homepage's guide links are generated from
+  the same file, so they cannot drift.
+
+Guide rules: low-risk jobs only (nothing on gas, mains electrical, structure,
+refrigerant or brakes), no stated prices or aisle numbers, no "exact" claims.
+Netlify's pretty-URL processing serves and links these without `.html`, so
+canonicals and the sitemap use the extensionless form.
+
+## Look and feel
+
+Warm paper canvas (`#faf8f5`), white cards, hairline `#d1d1cd` borders, one
+typeface (DM Sans) at weights 400 and 500, sizes 12/14/16 with a 28px page
+heading, pill controls and 16px cards. Charcoal (`#27251e`) is for primary
+actions; teal (`#016a71`) means active, selected, focused or a link. Store
+brand colours stay on the store buttons, but their *text* uses darker shades so
+it clears 4.5:1. Every text colour on the site passes WCAG AA.
+
 ## Deploying
 
 The site has been linked to GitHub (`matthew-6741/ask-danny`, branch `main`)
 since 2026-09-16. **Pushing to `main` deploys to production.** Netlify runs
-`scripts/build.js`, which runs `eval/local-check.js` (95 checks) and fails the
+`scripts/build.js`, which runs `eval/local-check.js` (112 checks) and fails the
 build if any fail. It then copies an explicit allowlist of 11 site files into
 `dist/`, which is what gets published. Functions deploy from
 `netlify/functions/`.

@@ -6,7 +6,7 @@
 <title>Terms of Use — Ask Danny</title>
 <meta name="description" content="Terms of Use and End User License Agreement for Ask Danny, including AI limitations, data collection, and liability.">
 <link rel="canonical" href="https://ask-danny-ai.com/terms.html">
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
 
 <script type="application/ld+json">
 {
@@ -21,17 +21,17 @@
 
 <style>
 :root {
-  --bg:#f4f3ef; --surface:#fff; --border:#e4e3dc; --text:#1a1a18;
-  --muted:#7a7a72; --accent:#E85B2A; --amber-bg:#fff4e5; --amber:#8a5200;
-  --red-bg:#fdecea; --red:#a5311f;
+  --bg:#faf8f5; --surface:#fff; --border:#d1d1cd; --text:#000;
+  --muted:#72706b; --accent:#016a71; --amber-bg:#faf1e3; --amber:#7a4b00;
+  --red-bg:#fbeceb; --red:#b3261e; --ink:#27251e; --subtle:#e8e6e1; --radius:16px; --radius-input:12px; --pill:9999px;
 }
 * { box-sizing:border-box; margin:0; padding:0; }
 body {
-  font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text);
+  font-family:'DM Sans',ui-sans-serif,system-ui,sans-serif; background:var(--bg); color:var(--text);
   line-height:1.65; padding:24px 16px 72px;
 }
 .wrap { max-width:720px; margin:0 auto; }
-.crumbs { font-size:12.5px; color:var(--muted); margin-bottom:20px; }
+.crumbs { font-size:12px; color:var(--muted); margin-bottom:20px; }
 .crumbs a { color:var(--muted); text-decoration:none; }
 .crumbs a:hover { color:var(--accent); text-decoration:underline; }
 .crumbs span { margin:0 6px; opacity:.6; }
@@ -40,43 +40,43 @@ body {
 .mark {
   width:44px; height:44px; background:var(--accent); border-radius:12px;
   display:flex; align-items:center; justify-content:center;
-  color:#fff; font-weight:600; font-size:14px; flex-shrink:0;
+  color:#fff; font-weight:500; font-size:14px; flex-shrink:0;
 }
-.mast h1 { font-family:'Bebas Neue',sans-serif; font-size:27px; letter-spacing:.5px; line-height:1; }
-.mast p { font-size:12.5px; color:var(--muted); }
+.mast h1 { font-family:'DM Sans',ui-sans-serif,system-ui,sans-serif; font-weight:500; font-size:24px; line-height:1; }
+.mast p { font-size:12px; color:var(--muted); }
 .effective { font-size:12px; color:var(--muted); margin-bottom:22px; }
 
 .card {
   background:var(--surface); border:1px solid var(--border);
-  border-radius:12px; padding:22px 24px; margin-bottom:14px;
+  border-radius:var(--radius); padding:22px 24px; margin-bottom:14px;
 }
-h2 { font-size:15.5px; font-weight:600; margin-bottom:9px; }
+h2 { font-size:16px; font-weight:500; margin-bottom:9px; }
 h2 .num { color:var(--accent); margin-right:7px; }
-p, li { font-size:13.8px; color:#333330; }
+p, li { font-size:14px; color:#27251e; }
 p + p { margin-top:9px; }
 ul { margin:8px 0 0 20px; }
 li { margin-bottom:6px; }
 a { color:var(--accent); }
-strong { font-weight:600; }
+strong { font-weight:500; }
 
-.notice { background:var(--amber-bg); border:1px solid #f0dcc0; border-radius:12px; padding:20px 22px; margin-bottom:14px; }
+.notice { background:var(--amber-bg); border:1px solid #ecd3a8; border-radius:var(--radius); padding:20px 22px; margin-bottom:14px; }
 .notice h2 { color:var(--amber); }
-.notice p, .notice li { color:#6b4410; }
+.notice p, .notice li { color:#7a4b00; }
 
-.caps { background:var(--red-bg); border:1px solid #f3ccc5; border-radius:12px; padding:20px 22px; margin-bottom:14px; }
+.caps { background:var(--red-bg); border:1px solid #efc4c0; border-radius:12px; padding:20px 22px; margin-bottom:14px; }
 .caps h2 { color:var(--red); }
-.caps p { color:#7d2b1c; font-size:13px; }
+.caps p { color:#b3261e; font-size:14px; }
 
-table { width:100%; border-collapse:collapse; margin-top:10px; font-size:13px; }
+table { width:100%; border-collapse:collapse; margin-top:10px; font-size:14px; }
 th, td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--border); vertical-align:top; }
-th { font-weight:600; font-size:11.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.4px; }
+th { font-weight:500; font-size:12px; color:var(--muted); }
 
 .back {
   display:inline-block; margin-top:20px; padding:11px 18px;
   background:var(--accent); color:#fff; text-decoration:none;
   border-radius:10px; font-size:14px; font-weight:500;
 }
-.legal-note { font-size:11.5px; color:var(--muted); margin-top:18px; line-height:1.55; }
+.legal-note { font-size:12px; color:var(--muted); margin-top:18px; line-height:1.55; }
 </style>
 </head>
 <body>
@@ -154,6 +154,8 @@ th { font-weight:600; font-size:11.5px; color:var(--muted); text-transform:upper
     <h2><span class="num">6.</span>Accounts and plans</h2>
     <p>You are responsible for the security of your account and for activity under it. Provide accurate information when registering.</p>
     <p>The Service currently offers a free plan with usage limits and may offer paid plans. Limits, features, and pricing may change. We may suspend or terminate accounts that abuse the Service, circumvent limits, or violate these Terms.</p>
+    <h3>Payments and refunds</h3>
+    <p><strong>Ask Danny is free. We do not collect payments, take card details, or charge for anything</strong>, so there is nothing to refund. If a paid plan is ever introduced, we will publish the price and a refund policy, and update these Terms, before taking any payment. Nobody will be charged for a plan they already have.</p>
   </section>
 
   <section class="card">

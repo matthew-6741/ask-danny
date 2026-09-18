@@ -1,0 +1,18 @@
+# Dependabot opens pull requests when a dependency or workflow action has a
+# newer version. Security updates are what matter here: @netlify/blobs handles
+# the subscriber list, and a compromised GitHub action could read repo secrets.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      all-dependencies:
+        patterns: ['*']
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

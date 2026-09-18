@@ -6,7 +6,7 @@
 <title>Cookies Policy — Ask Danny</title>
 <meta name="description" content="How Ask Danny uses cookies, browser storage, authentication storage, and analytics technologies.">
 <link rel="canonical" href="https://ask-danny-ai.com/cookies.html">
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
 
 <script type="application/ld+json">
 {
@@ -21,17 +21,17 @@
 
 <style>
 :root {
-  --bg:#f4f3ef; --surface:#fff; --border:#e4e3dc; --text:#1a1a18;
-  --muted:#7a7a72; --accent:#E85B2A; --accent-light:#fdf0eb;
-  --amber-bg:#fff4e5; --amber:#8a5200;
+  --bg:#faf8f5; --surface:#fff; --border:#d1d1cd; --text:#000;
+  --muted:#72706b; --accent:#016a71; --accent-light:#e6f0f0;
+  --amber-bg:#faf1e3; --amber:#7a4b00; --ink:#27251e; --subtle:#e8e6e1; --radius:16px; --radius-input:12px; --pill:9999px;
 }
 * { box-sizing:border-box; margin:0; padding:0; }
 body {
-  font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text);
+  font-family:'DM Sans',ui-sans-serif,system-ui,sans-serif; background:var(--bg); color:var(--text);
   line-height:1.65; padding:24px 16px 72px;
 }
 .wrap { max-width:720px; margin:0 auto; }
-.crumbs { font-size:12.5px; color:var(--muted); margin-bottom:20px; }
+.crumbs { font-size:12px; color:var(--muted); margin-bottom:20px; }
 .crumbs a { color:var(--muted); text-decoration:none; }
 .crumbs a:hover { color:var(--accent); text-decoration:underline; }
 .crumbs span { margin:0 6px; opacity:.6; }
@@ -39,32 +39,32 @@ body {
 .mark {
   width:44px; height:44px; background:var(--accent); border-radius:12px;
   display:flex; align-items:center; justify-content:center;
-  color:#fff; font-weight:600; font-size:14px; flex-shrink:0;
+  color:#fff; font-weight:500; font-size:14px; flex-shrink:0;
 }
-.mast h1 { font-family:'Bebas Neue',sans-serif; font-size:27px; letter-spacing:.5px; line-height:1; }
-.mast p { font-size:12.5px; color:var(--muted); }
+.mast h1 { font-family:'DM Sans',ui-sans-serif,system-ui,sans-serif; font-weight:500; font-size:24px; line-height:1; }
+.mast p { font-size:12px; color:var(--muted); }
 .updated { font-size:12px; color:var(--muted); margin-bottom:22px; }
 .card {
   background:var(--surface); border:1px solid var(--border);
-  border-radius:12px; padding:22px 24px; margin-bottom:14px;
+  border-radius:var(--radius); padding:22px 24px; margin-bottom:14px;
 }
-h2 { font-size:15.5px; font-weight:600; margin-bottom:9px; }
-h3 { font-size:13.5px; font-weight:600; margin:16px 0 6px; }
-p, li { font-size:13.8px; color:#333330; }
+h2 { font-size:16px; font-weight:500; margin-bottom:9px; }
+h3 { font-size:14px; font-weight:500; margin:16px 0 6px; }
+p, li { font-size:14px; color:#27251e; }
 p + p { margin-top:9px; }
 ul { margin:8px 0 0 20px; }
 li { margin-bottom:6px; }
 a { color:var(--accent); }
-strong { font-weight:600; }
+strong { font-weight:500; }
 .notice {
-  background:var(--amber-bg); border:1px solid #f0dcc0; border-radius:12px;
+  background:var(--amber-bg); border:1px solid #ecd3a8; border-radius:var(--radius);
   padding:20px 22px; margin-bottom:14px;
 }
 .notice h2 { color:var(--amber); }
-.notice p, .notice li { color:#6b4410; }
-table { width:100%; border-collapse:collapse; margin-top:10px; font-size:13px; }
+.notice p, .notice li { color:#7a4b00; }
+table { width:100%; border-collapse:collapse; margin-top:10px; font-size:14px; }
 th, td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--border); vertical-align:top; }
-th { font-weight:600; font-size:11.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.4px; }
+th { font-weight:500; font-size:12px; color:var(--muted); }
 .tbl-wrap { overflow-x:auto; }
 .back {
   display:inline-block; margin-top:20px; padding:11px 18px;
@@ -137,6 +137,7 @@ th { font-weight:600; font-size:11.5px; color:var(--muted); text-transform:upper
     <ul>
       <li><strong>Google Firebase</strong> — account authentication and saved data for signed-in users.</li>
       <li><strong>Google Analytics</strong> — optional anonymous usage measurement when analytics are enabled.</li>
+      <li><strong>Google Fonts</strong> &mdash; serves the typeface this site uses. Google receives your IP address and browser details when a font loads. It sets no cookie.</li>
       <li><strong>Netlify</strong> — hosts and delivers the website and serverless functions.</li>
     </ul>
     <p>Those providers handle their technologies under their own privacy terms. For the broader list of providers and what data is shared with them, see our <a href="/privacy.html">Privacy &amp; AI Disclosure</a>.</p>

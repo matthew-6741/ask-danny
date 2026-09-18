@@ -85,6 +85,50 @@ function keyFor(email) {
   return crypto.createHash('sha256').update(email.toLowerCase()).digest('hex');
 }
 
+// ── Addresses at rest ────────────────────────────────────────────────────
+// Netlify already encrypts Blobs on disk. This is the layer above that: with
+// LIST_KEY set, a record holds no readable address, so a bug that exposes the
+// store, or a stolen admin token used to export it, yields ciphertext and not
+// a mailing list. The blob key stays a hash of the address, so lookups and
+// deduplication never need to decrypt anything.
+//
+// Set it once with a key only Netlify holds:
+//   netlify env:set LIST_KEY "$(openssl rand -base64 32)"
+//
+// Records written before the key existed keep working: readEmail() returns
+// either form, and each one is re-written encrypted the next time it changes.
+function listKey() {
+  const raw = process.env.LIST_KEY;
+  if (!raw) return null;
+  const key = Buffer.from(raw, 'base64');
+  return key.length === 32 ? key : null;
+}
+
+function encryptEmail(email) {
+  const key = listKey();
+  if (!key) return null;
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+  const enc = Buffer.concat([cipher.update(email, 'utf8'), cipher.final()]);
+  return Buffer.concat([iv, cipher.getAuthTag(), enc]).toString('base64');
+}
+
+function readEmail(rec) {
+  if (!rec) return null;
+  if (rec.email) return rec.email;               // written before LIST_KEY
+  if (!rec.emailEnc) return null;
+  const key = listKey();
+  if (!key) return null;                          // key rotated away or unset
+  try {
+    const buf = Buffer.from(rec.emailEnc, 'base64');
+    const decipher = crypto.createDecipheriv('aes-256-gcm', key, buf.subarray(0, 12));
+    decipher.setAuthTag(buf.subarray(12, 28));
+    return Buffer.concat([decipher.update(buf.subarray(28)), decipher.final()]).toString('utf8');
+  } catch {
+    return null;   // wrong key or tampered record: never guess
+  }
+}
+
 function token() {
   return crypto.randomBytes(24).toString('base64url');
 }
@@ -122,23 +166,23 @@ async function rateLimited(event) {
   return false;
 }
 
-function page(title, heading, body, accent = '#E85B2A') {
+function page(title, heading, body, accent = '#016a71') {
   return `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex">
 <title>${title} — Ask Danny</title>
 <style>
   :root{color-scheme:light}
-  body{margin:0;background:#faf9f5;color:#1a1a18;
+  body{margin:0;background:#faf8f5;color:#000;
        font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
        display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px}
-  .card{background:#fff;border:1px solid #e4e3dc;border-radius:14px;
+  .card{background:#fff;border:1px solid #d1d1cd;border-radius:16px;
         padding:36px 32px;max-width:460px;width:100%}
   .mark{display:inline-flex;align-items:center;justify-content:center;
         width:44px;height:44px;border-radius:10px;background:${accent};
-        color:#fff;font-weight:700;letter-spacing:.5px;margin-bottom:18px}
-  h1{font-size:22px;margin:0 0 10px}
-  p{margin:0 0 14px;color:#4a4a44}
+        color:#fff;font-weight:500;margin-bottom:18px}
+  h1{font-size:24px;font-weight:500;margin:0 0 10px}
+  p{margin:0 0 14px;color:#27251e}
   a{color:${accent}}
 </style></head><body><div class="card">
 <div class="mark">AD</div><h1>${heading}</h1>${body}
@@ -196,7 +240,7 @@ exports.handler = async (event) => {
     // unknown tells a stranger which tokens are real.
     return html(200, page('Unsubscribed', 'You are unsubscribed',
       '<p>You will not get any more Ask Danny update emails. Service notices about your account are separate and are not affected.</p>'
-      + '<p>Changed your mind? You can sign up again on the site any time.</p>', '#1e7d45'));
+      + '<p>Changed your mind? You can sign up again on the site any time.</p>'));
   }
 
   // ── admin export ─────────────────────────────────────────────────────────
@@ -215,7 +259,7 @@ exports.handler = async (event) => {
     // useless for debugging — this is the way back in.
     if ((event.queryStringParameters || {}).diag) {
       const probe = { at: new Date().toISOString() };
-      const steps = {};
+      const steps = { encryptionAtRest: listKey() ? 'on' : 'off (set LIST_KEY)' };
       // Field names only, never values: the payload holds a Blobs token.
       try {
         steps.contextFields = event.blobs
@@ -251,7 +295,8 @@ exports.handler = async (event) => {
       for (const b of blobs) {
         const rec = await s.get(b.key, { type: 'json' });
         if (rec) out.push({
-          email: rec.email, status: rec.status, source: rec.source,
+          email: readEmail(rec) || '(encrypted: LIST_KEY missing or rotated)',
+          status: rec.status, source: rec.source,
           createdAt: rec.createdAt, unsubscribedAt: rec.unsubscribedAt,
         });
       }
@@ -293,8 +338,9 @@ exports.handler = async (event) => {
 
   // Re-subscribing after unsubscribing is allowed, and is a fresh consent —
   // so the record and its timestamp are replaced, not revived.
+  const encrypted = encryptEmail(email);
   const record = {
-    email,
+    ...(encrypted ? { emailEnc: encrypted } : { email }),
     status: 'subscribed',
     source: String(body.source || 'site').slice(0, 40),
     consentText: CONSENT_TEXT,

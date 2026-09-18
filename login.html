@@ -6,7 +6,7 @@
 <title>Sign in — Ask Danny</title>
 <meta name="description" content="Sign in to Ask Danny to save your job history and material lists across devices.">
 <meta name="robots" content="noindex">
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
@@ -14,17 +14,17 @@
 
 <style>
 :root {
-  --bg:#f4f3ef; --surface:#fff; --border:#e4e3dc; --text:#1a1a18;
-  --muted:#7a7a72; --accent:#E85B2A; --accent-light:#fdf0eb; --red:#c0392b;
+  --bg:#faf8f5; --surface:#fff; --border:#d1d1cd; --text:#000;
+  --muted:#72706b; --accent:#016a71; --accent-light:#e6f0f0; --red:#b3261e; --ink:#27251e; --subtle:#e8e6e1; --radius:16px; --radius-input:12px; --pill:9999px;
 }
 * { box-sizing:border-box; margin:0; padding:0; }
 body {
-  font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text);
+  font-family:'DM Sans',ui-sans-serif,system-ui,sans-serif; background:var(--bg); color:var(--text);
   min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px;
 }
 .card {
   background:var(--surface); border:1px solid var(--border);
-  border-radius:16px; padding:34px 30px; max-width:420px; width:100%;
+  border-radius:var(--radius); padding:34px 30px; max-width:420px; width:100%;
 }
 .crumbs { font-size:12px; color:var(--muted); margin-bottom:16px; }
 .crumbs a { color:var(--muted); text-decoration:none; }
@@ -35,18 +35,18 @@ body {
 .mark {
   width:38px; height:38px; background:var(--accent); border-radius:11px;
   display:flex; align-items:center; justify-content:center;
-  color:#fff; font-weight:600; font-size:12px;
+  color:#fff; font-weight:500; font-size:12px;
 }
-.brand-name { font-family:'Bebas Neue',sans-serif; font-size:19px; letter-spacing:.6px; }
+.brand-name { font-family:'DM Sans',ui-sans-serif,system-ui,sans-serif; font-weight:500; font-size:24px; }
 
-h1 { font-size:17px; font-weight:600; margin-bottom:5px; }
-.sub { font-size:13px; color:var(--muted); line-height:1.5; margin-bottom:20px; }
+h1 { font-size:24px; font-weight:500; margin-bottom:5px; }
+.sub { font-size:14px; color:var(--muted); line-height:1.5; margin-bottom:20px; }
 
 .gbtn {
   width:100%; display:flex; align-items:center; justify-content:center; gap:9px;
-  border:1px solid var(--border); border-radius:10px; padding:11px;
+  border:1px solid var(--border); border-radius:var(--pill); padding:11px;
   background:var(--surface); cursor:pointer; font-size:14px; font-weight:500;
-  color:var(--text); font-family:'DM Sans',sans-serif; margin-bottom:14px; min-height:44px;
+  color:var(--text); font-family:'DM Sans',ui-sans-serif,system-ui,sans-serif; margin-bottom:14px; min-height:44px;
 }
 .gbtn:hover { background:var(--bg); }
 
@@ -56,35 +56,34 @@ h1 { font-size:17px; font-weight:600; margin-bottom:5px; }
 
 .tabs { display:flex; border:1px solid var(--border); border-radius:10px; overflow:hidden; margin-bottom:16px; }
 .tab {
-  flex:1; padding:10px; font-size:13px; border:none; background:var(--bg);
-  color:var(--muted); cursor:pointer; font-family:'DM Sans',sans-serif; min-height:42px;
+  flex:1; padding:10px; font-size:14px; border:none; background:var(--bg);
+  color:var(--muted); cursor:pointer; font-family:'DM Sans',ui-sans-serif,system-ui,sans-serif; min-height:42px;
 }
-.tab.active { background:var(--surface); color:var(--text); font-weight:600; }
+.tab.active { background:var(--surface); color:var(--text); font-weight:500; }
 
-label.fl { display:block; font-size:11px; font-weight:600; color:var(--muted);
-  letter-spacing:.5px; margin:11px 0 5px; text-transform:uppercase; }
+label.fl { display:block; font-size:12px; font-weight:500; color:var(--muted); margin:11px 0 5px; }
 input.fi, select.fi {
-  width:100%; border:1px solid var(--border); border-radius:9px; padding:11px 12px;
+  width:100%; border:1px solid var(--border); border-radius:var(--radius-input); padding:11px 12px;
   font-size:14px; background:var(--bg); color:var(--text);
-  font-family:'DM Sans',sans-serif; min-height:44px;
+  font-family:'DM Sans',ui-sans-serif,system-ui,sans-serif; min-height:44px;
 }
 input.fi:focus, select.fi:focus { outline:none; border-color:var(--accent); }
 .hidden { display:none; }
 
-.err { font-size:12.5px; color:var(--red); min-height:17px; margin-top:9px; }
+.err { font-size:12px; color:var(--red); min-height:17px; margin-top:9px; }
 .submit {
   width:100%; background:var(--accent); color:#fff; border:none; border-radius:10px;
-  padding:13px; font-size:14.5px; font-weight:500; cursor:pointer;
-  font-family:'DM Sans',sans-serif; margin-top:6px; margin-bottom:10px; min-height:46px;
+  padding:13px; font-size:14px; font-weight:500; cursor:pointer;
+  font-family:'DM Sans',ui-sans-serif,system-ui,sans-serif; margin-top:6px; margin-bottom:10px; min-height:46px;
 }
-.submit:hover { background:#d24d1f; }
+.submit:hover { background:#000; }
 .guest {
   width:100%; background:transparent; color:var(--muted);
   border:1px dashed var(--border); border-radius:10px; padding:11px;
-  font-size:13px; cursor:pointer; font-family:'DM Sans',sans-serif; min-height:44px;
+  font-size:14px; cursor:pointer; font-family:'DM Sans',ui-sans-serif,system-ui,sans-serif; min-height:44px;
 }
 .guest:hover { background:var(--bg); border-color:var(--accent); color:var(--accent); }
-.note { font-size:11.5px; color:var(--muted); text-align:center; margin-top:9px; line-height:1.5; }
+.note { font-size:12px; color:var(--muted); text-align:center; margin-top:9px; line-height:1.5; }
 .note a { color:var(--muted); }
 </style>
 </head>

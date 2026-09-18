@@ -1,3 +1,8 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <!-- Google Analytics (GA4) — consent-gated.
      This used to load on every page view before the visitor had said anything,
      which is the "tracking before consent" problem: under GDPR/ePrivacy an
@@ -37,26 +42,20 @@
     if (localStorage.getItem(window.COOKIE_CONSENT_KEY) === 'accepted') window.loadAnalytics();
   } catch (e) { /* storage blocked: stay opted out */ }
 </script>
-
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ask Danny — One-Trip Material Lists for Trades | Built by Matthew Sanchez, USC</title>
+<title>Ask Danny: AI Parts Lists for Home and Auto Repairs</title>
 
 <!-- ── Primary SEO ── -->
-<meta name="description" content="Describe a repair job or photograph the problem. Ask Danny returns a one-trip material list with aisle numbers for Home Depot, Lowe's and AutoZone.">
+<meta name="description" content="Describe a plumbing, HVAC, carpentry, appliance or car problem, or add a photo or video. Ask Danny builds a free one-trip parts list with aisle numbers for Home Depot, Lowe's and AutoZone.">
 <meta name="author" content="Matthew John Sanchez">
 <meta name="robots" content="index, follow">
-<meta name="theme-color" content="#E85B2A">
+<meta name="theme-color" content="#faf8f5">
 <link rel="canonical" href="https://ask-danny-ai.com/">
 
 <!-- ── Open Graph (Facebook / LinkedIn) ── -->
 <meta property="og:type"        content="website">
 <meta property="og:url"         content="https://ask-danny-ai.com/">
-<meta property="og:title"       content="Ask Danny — One-Trip Material Lists for Trades | Matthew Sanchez, USC">
-<meta property="og:description" content="Turn a repair job or photo into a one-trip material list with aisle guidance for Home Depot, Lowe's, and AutoZone.">
+<meta property="og:title"       content="Ask Danny: AI Parts Lists for Home and Auto Repairs">
+<meta property="og:description" content="Describe what's broken or snap a photo and get a one-trip parts list with aisle numbers for Home Depot, Lowe's and AutoZone. Free.">
 <meta property="og:image"       content="https://ask-danny-ai.com/og-image.png">
 <meta property="og:site_name"   content="Ask Danny">
 <meta name="application-name" content="Ask Danny">
@@ -66,8 +65,8 @@
 <!-- ── Twitter / X Card ── -->
 <meta name="twitter:card"        content="summary_large_image">
 <meta name="twitter:url"         content="https://ask-danny-ai.com/">
-<meta name="twitter:title"       content="Ask Danny — One-Trip Material Lists for Trades">
-<meta name="twitter:description" content="Snap a photo of any trade problem. Get an exact, one-trip material list with aisle numbers for Home Depot, Lowe's, or AutoZone. Built by USC student Matthew Sanchez.">
+<meta name="twitter:title"       content="Ask Danny: AI Parts Lists for Home and Auto Repairs">
+<meta name="twitter:description" content="Snap a photo of a repair problem and get a one-trip parts list with aisle numbers for Home Depot, Lowe's or AutoZone. Built by USC student Matthew Sanchez.">
 <meta name="twitter:image"       content="https://ask-danny-ai.com/og-image.png">
 <meta name="twitter:creator"     content="@MatthewSanchez">
 
@@ -154,19 +153,19 @@
     "price": "0",
     "priceCurrency": "USD"
   },
-  "keywords": "trade material list, contractor material list, Home Depot aisle finder, Lowe's aisle finder, AutoZone parts list, one-trip shopping, plumbing materials, HVAC materials, contractor tool",
+  "keywords": "AI parts list, repair parts list, home repair, blue collar AI, tradesperson tool, contractor material list, Home Depot aisle finder, Lowe's aisle finder, AutoZone parts list, plumbing parts, HVAC parts, appliance parts",
   "featureList": [
     "One-trip material lists from job details and photos",
-    "Exact aisle numbers for Home Depot, Lowe's, AutoZone",
+    "Estimated aisle numbers for Home Depot, Lowe's and AutoZone",
     "Geolocation-aware results",
     "Voice input via Web Speech API",
-    "Job history — last 10 lists saved locally",
+    "Job history saved on your device",
     "Tool checklist alongside materials",
     "Multi-store price comparison (Home Depot vs Lowe's)",
     "Quick job templates per trade",
     "Offline mode with cached results",
     "Quantity calculator from measurements",
-    "9 trade categories: Plumbing, Electrical, Framing, HVAC, Concrete, Roofing, Paint, Auto, General",
+    "Five trades: Plumbing, basic HVAC, Carpentry, Auto and Appliance",
     "Printable and copyable material lists"
   ]
 }
@@ -186,7 +185,7 @@
   },
   "foundingDate": "2025",
   "knowsAbout": [
-    "Trade technology", "Blue collar technology", "Restaurant technology",
+    "Trade technology", "Blue collar technology", "Home repair",
     "Home improvement tools", "Contractor tools", "Trade material lists"
   ]
 }
@@ -197,7 +196,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
 
 <script type="application/ld+json">
 {
@@ -216,7 +215,7 @@
 #authScreen {
   position: fixed;
   inset: 0;
-  background: #f4f3ef;
+  background: var(--bg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -225,10 +224,10 @@
   overflow-y: auto;
 }
 .auth-card {
-  background: #fff;
-  border: 1px solid #e4e3dc;
-  border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0,0,0,.10);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
   padding: 32px;
   width: 100%;
   max-width: 400px;
@@ -241,126 +240,128 @@
 }
 .auth-logo-mark {
   width: 40px; height: 40px;
-  background: #E85B2A;
-  border-radius: 10px;
+  background: var(--accent);
+  border-radius: var(--radius-input);
   display: flex; align-items: center; justify-content: center;
-  font-family: 'Bebas Neue', sans-serif;
-  font-size: 20px; color: white; letter-spacing: 1px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 16px; color: #fff;
 }
-.auth-logo-text { font-family: 'Bebas Neue', sans-serif; font-size: 20px; letter-spacing: 1.5px; }
-.auth-headline { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
-.auth-sub { font-size: 12px; color: #7a7a72; margin-bottom: 20px; line-height: 1.5; }
+.auth-logo-text { font-family: 'DM Sans', sans-serif; font-size: 16px; }
+.auth-headline { font-size: 16px; font-weight: 500; margin-bottom: 4px; }
+.auth-sub { font-size: 12px; color: var(--muted); margin-bottom: 20px; line-height: 1.5; }
 .auth-google-btn {
   width: 100%;
   padding: 11px;
-  border: 1.5px solid #e4e3dc;
-  border-radius: 10px;
-  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--pill);
+  background: var(--surface);
   font-family: 'DM Sans', sans-serif;
-  font-size: 13px; font-weight: 600;
+  font-size: 14px; font-weight: 500;
   cursor: pointer;
   display: flex; align-items: center; justify-content: center; gap: 10px;
   transition: border-color .15s, box-shadow .15s;
   margin-bottom: 16px;
 }
-.auth-google-btn:hover { border-color: #4285f4; box-shadow: 0 0 0 2px #e8f0fe; }
+.auth-google-btn:hover { border-color: var(--muted); box-shadow: none; }
 .auth-google-icon { width: 18px; height: 18px; flex-shrink: 0; }
 .auth-divider {
   display: flex; align-items: center; gap: 10px;
-  font-size: 11px; color: #b0b0a8; margin-bottom: 16px;
+  font-size: 12px; color: var(--muted); margin-bottom: 16px;
 }
 .auth-divider::before, .auth-divider::after {
-  content: ''; flex: 1; height: 1px; background: #e4e3dc;
+  content: ''; flex: 1; height: 1px; background: var(--border);
 }
 .auth-tabs {
   display: flex;
-  border: 1.5px solid #e4e3dc;
-  border-radius: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--pill);
   overflow: hidden;
   margin-bottom: 16px;
 }
 .auth-tab {
   flex: 1; padding: 9px;
-  border: none; background: #f4f3ef;
+  border: none; background: var(--bg);
   font-family: 'DM Sans', sans-serif;
-  font-size: 12px; font-weight: 600; color: #7a7a72;
+  font-size: 12px; font-weight: 500; color: var(--muted);
   cursor: pointer; transition: all .15s;
 }
-.auth-tab.active { background: #fff; color: #1a1a18; }
+.auth-tab.active { background: var(--surface); color: var(--text); }
 .auth-fields { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
 .auth-field { display: flex; flex-direction: column; gap: 4px; }
-.auth-field label { font-size: 11px; font-weight: 600; color: #7a7a72; text-transform: uppercase; letter-spacing: .4px; }
+.auth-field label { font-size: 12px; font-weight: 500; color: var(--muted);}
 .auth-field input,
 .auth-field select {
   padding: 10px 12px;
-  border: 1.5px solid #e4e3dc;
-  border-radius: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-input);
   font-family: 'DM Sans', sans-serif;
-  font-size: 13px;
-  background: #fff; color: #1a1a18;
+  font-size: 14px;
+  background: var(--surface); color: var(--text);
   outline: none;
   transition: border-color .15s;
 }
 .auth-field input:focus,
-.auth-field select:focus { border-color: #E85B2A; }
+.auth-field select:focus { border-color: var(--accent); }
 .auth-submit-btn {
   width: 100%; padding: 12px;
-  background: #E85B2A; color: white;
-  border: none; border-radius: 10px;
+  background: var(--ink); color: #fff;
+  border: none; border-radius: var(--pill);
   font-family: 'DM Sans', sans-serif;
-  font-size: 14px; font-weight: 600;
+  font-size: 14px; font-weight: 500;
   cursor: pointer; transition: opacity .15s;
   margin-bottom: 10px;
 }
 .auth-submit-btn:hover { opacity: .88; }
 .auth-error {
-  font-size: 12px; color: #c0392b;
+  font-size: 12px; color: var(--red);
   text-align: center; min-height: 16px;
   margin-bottom: 10px;
 }
 .auth-guest-btn {
   width: 100%; padding: 10px;
-  border: 1.5px dashed #e4e3dc;
-  border-radius: 10px;
+  border: 1px dashed var(--border);
+  border-radius: var(--pill);
   background: none;
   font-family: 'DM Sans', sans-serif;
-  font-size: 12px; color: #7a7a72;
+  font-size: 12px; color: var(--muted);
   cursor: pointer; transition: all .15s;
 }
-.auth-guest-btn:hover { border-color: #7a7a72; color: #1a1a18; }
-.auth-guest-note { font-size: 10px; color: #b0b0a8; text-align: center; margin-top: 6px; }
+.auth-guest-btn:hover { border-color: var(--muted); color: var(--text); }
+.auth-guest-note { font-size: 12px; color: var(--muted); text-align: center; margin-top: 6px; }
+.auth-legal { font-size: 12px; color: var(--muted); line-height: 1.5; margin: 0 0 10px; }
+.auth-optional { color: var(--muted); font-weight: 400; }
 
 /* User badge in header */
 .user-badge {
   display: flex; align-items: center; gap: 7px;
   padding: 5px 10px;
-  border: 1px solid #e4e3dc;
-  border-radius: 20px;
-  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--pill);
+  background: var(--surface);
   font-size: 12px; font-weight: 500;
   cursor: pointer;
   position: relative;
   transition: border-color .15s;
 }
-.user-badge:hover { border-color: var(--accent); }
+.user-badge:hover { border-color: var(--muted); }
 .user-avatar {
   width: 22px; height: 22px;
   border-radius: 50%;
-  background: var(--accent);
-  color: white;
+  background: var(--ink);
+  color: #fff;
   display: flex; align-items: center; justify-content: center;
-  font-size: 10px; font-weight: 700;
+  font-size: 12px; font-weight: 500;
   flex-shrink: 0;
 }
-.user-badge.guest .user-avatar { background: #b0b0a8; }
+.user-badge.guest .user-avatar { background: var(--placeholder); }
 .user-dropdown {
   position: absolute;
   top: calc(100% + 6px);
   right: 0;
-  background: #fff;
-  border: 1px solid #e4e3dc;
-  border-radius: 10px;
-  box-shadow: 0 4px 16px rgba(0,0,0,.12);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-input);
+  box-shadow: var(--shadow);
   min-width: 180px;
   overflow: hidden;
   z-index: 100;
@@ -369,26 +370,26 @@
 .user-dropdown.open { display: block; }
 .user-dropdown-info {
   padding: 12px 14px;
-  border-bottom: 1px solid #e4e3dc;
+  border-bottom: 1px solid var(--border);
   font-size: 12px;
 }
-.user-dropdown-name { font-weight: 600; color: #1a1a18; }
-.user-dropdown-type { font-size: 11px; color: #7a7a72; margin-top: 1px; }
+.user-dropdown-name { font-weight: 500; color: var(--text); }
+.user-dropdown-type { font-size: 12px; color: var(--muted); margin-top: 1px; }
 .user-dropdown-signout {
   display: block; width: 100%; padding: 11px 14px;
   background: none; border: none;
   font-family: 'DM Sans', sans-serif;
-  font-size: 13px; color: #c0392b;
+  font-size: 14px; color: var(--red);
   text-align: left; cursor: pointer;
   transition: background .1s;
 }
-.user-dropdown-signout:hover { background: #fdecea; }
+.user-dropdown-signout:hover { background: var(--red-bg); }
 
 /* ── Access gate ── */
 #accessGate {
   position: fixed;
   inset: 0;
-  background: #f4f3ef;
+  background: var(--bg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -396,10 +397,10 @@
   padding: 24px;
 }
 .gate-card {
-  background: #fff;
-  border: 1px solid #e4e3dc;
-  border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0,0,0,.10);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
   padding: 36px 32px 32px;
   width: 100%;
   max-width: 380px;
@@ -410,50 +411,46 @@
 }
 .gate-logo {
   width: 52px; height: 52px;
-  background: #E85B2A;
-  border-radius: 13px;
+  background: var(--accent);
+  border-radius: var(--radius-input);
   display: flex; align-items: center; justify-content: center;
-  font-family: 'Bebas Neue', sans-serif;
-  font-size: 26px; color: white; letter-spacing: 1px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 16px; color: #fff;
 }
 .gate-title {
-  font-family: 'Bebas Neue', sans-serif;
-  font-size: 26px; letter-spacing: 1.5px;
-  color: #1a1a18; margin-top: -6px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 16px;
+  color: var(--text); margin-top: -6px;
 }
 .gate-sub {
-  font-size: 13px; color: #7a7a72;
+  font-size: 14px; color: var(--muted);
   text-align: center; line-height: 1.5;
   margin-top: -10px;
 }
 .gate-badge {
-  font-size: 11px; font-weight: 600;
+  font-size: 12px; font-weight: 500;
   padding: 4px 10px;
-  background: #fdf0eb;
-  color: #E85B2A;
-  border-radius: 20px;
-  border: 1px solid #fcd5c0;
-  letter-spacing: .4px;
-  text-transform: uppercase;
+  background: var(--accent-light);
+  color: var(--accent);
+  border-radius: var(--pill);
+  border: 1px solid var(--border);
 }
 .gate-input-wrap { width: 100%; position: relative; }
 .gate-input {
   width: 100%;
   padding: 13px 16px;
-  border: 1.5px solid #e4e3dc;
-  border-radius: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-input);
   font-family: 'DM Sans', sans-serif;
-  font-size: 15px;
-  letter-spacing: 3px;
+  font-size: 16px;
   text-align: center;
-  text-transform: uppercase;
-  outline: none;
-  background: #fff;
-  color: #1a1a18;
+outline: none;
+  background: var(--surface);
+  color: var(--text);
   transition: border-color .15s;
 }
-.gate-input:focus { border-color: #E85B2A; }
-.gate-input.shake { animation: gateShake .35s ease; border-color: #c0392b; }
+.gate-input:focus { border-color: var(--accent); }
+.gate-input.shake { animation: gateShake .35s ease; border-color: var(--red); }
 @keyframes gateShake {
   0%,100% { transform: translateX(0) }
   20%      { transform: translateX(-7px) }
@@ -462,47 +459,59 @@
   80%      { transform: translateX(5px) }
 }
 .gate-error {
-  font-size: 12px; color: #c0392b;
+  font-size: 12px; color: var(--red);
   text-align: center; min-height: 16px;
   margin-top: -8px;
 }
 .gate-btn {
   width: 100%;
   padding: 13px;
-  background: #E85B2A;
-  color: white;
+  background: var(--ink);
+  color: #fff;
   border: none;
-  border-radius: 10px;
+  border-radius: var(--pill);
   font-family: 'DM Sans', sans-serif;
-  font-size: 14px; font-weight: 600;
+  font-size: 14px; font-weight: 500;
   cursor: pointer;
   transition: opacity .15s;
 }
 .gate-btn:hover { opacity: .88; }
 .gate-footer {
-  font-size: 11px; color: #b0b0a8;
+  font-size: 12px; color: var(--muted);
   text-align: center;
 }
 
 /* ── Tokens — Light ── */
 :root {
-  --bg:          #f4f3ef;
-  --surface:     #ffffff;
-  --border:      #e4e3dc;
-  --text:        #1a1a18;
-  --muted:       #7a7a72;
-  --accent:      #E85B2A;
-  --accent-light:#fdf0eb;
-  --green:       #1e7d45;
-  --green-bg:    #e6f4ec;
-  --red:         #c0392b;
-  --red-bg:      #fdecea;
-  --orange-bg:   #fff4e5;
-  --orange:      #b35a00;
-  --blue-bg:     #e8f0fe;
-  --blue:        #1a56db;
-  --radius:      12px;
-  --shadow:      0 2px 12px rgba(0,0,0,.08);
+  /* Warm paper canvas, white cards, monochrome text, one teal accent.
+     Teal marks what is active or selected; primary actions are charcoal. */
+  --bg:           #faf8f5;
+  --surface:      #ffffff;
+  --subtle:       #e8e6e1;
+  --skeleton:     #f0eeea;
+  --border:       #d1d1cd;
+  --text:         #000000;
+  --ink:          #27251e;
+  --muted:        #72706b;
+  --placeholder:  #92918b;
+  --accent:       #016a71;
+  --accent-light: #e6f0f0;
+  /* Status colors. Success reads as the accent; warnings and errors keep warm
+     amber and red, because those carry meaning the palette cannot drop. */
+  --green:        #016a71;
+  --green-bg:     #e6f0f0;
+  --red:          #b3261e;
+  --red-bg:       #fbeceb;
+  --red-border:   #efc4c0;
+  --orange:       #7a4b00;
+  --orange-bg:    #faf1e3;
+  --orange-border:#ecd3a8;
+  --blue:         #27251e;
+  --blue-bg:      #f0eeea;
+  --radius:       16px;
+  --radius-input: 12px;
+  --pill:         9999px;
+  --shadow:       rgba(0,0,0,.08) 0 1px 2px 0;
 }
 
 body {
@@ -519,7 +528,7 @@ body {
 /* ── Shell ── */
 .shell {
   width: 100%;
-  max-width: 680px;
+  max-width: 640px;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -529,9 +538,9 @@ body {
 .offline-banner {
   padding: 10px 16px;
   background: var(--orange-bg);
-  border: 1px solid #ffe0a0;
-  border-radius: var(--radius);
-  font-size: 13px;
+  border: 1px solid var(--orange-border);
+  border-radius: var(--radius-input);
+  font-size: 14px;
   color: var(--orange);
   font-weight: 500;
   text-align: center;
@@ -554,25 +563,23 @@ body {
   width: 40px;
   height: 40px;
   background: var(--accent);
-  border-radius: 10px;
+  border-radius: var(--radius-input);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: 'Bebas Neue', sans-serif;
-  font-size: 20px;
-  color: white;
-  letter-spacing: 1px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 16px;
+  color: #fff;
   flex-shrink: 0;
 }
 .logo-text {
-  font-family: 'Bebas Neue', sans-serif;
-  font-size: 22px;
-  letter-spacing: 1.5px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 16px;
   color: var(--text);
   line-height: 1;
 }
 .logo-sub {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
   margin-top: 2px;
   font-weight: 400;
@@ -589,7 +596,7 @@ body {
   gap: 6px;
   padding: 6px 12px;
   border: 1px solid var(--border);
-  border-radius: 20px;
+  border-radius: var(--pill);
   background: var(--surface);
   font-size: 12px;
   color: var(--muted);
@@ -597,7 +604,7 @@ body {
   transition: border-color .15s, color .15s;
   white-space: nowrap;
 }
-.loc-badge:hover { border-color: var(--accent); color: var(--accent); }
+.loc-badge:hover { border-color: var(--muted); color: var(--text); }
 .loc-badge.located { color: var(--green); border-color: var(--green-bg); background: var(--green-bg); }
 .loc-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
 
@@ -608,7 +615,7 @@ body {
   gap: 6px;
   padding: 6px 12px;
   border: 1px solid var(--border);
-  border-radius: 20px;
+  border-radius: var(--pill);
   background: var(--surface);
   font-size: 12px;
   color: var(--muted);
@@ -616,7 +623,7 @@ body {
   transition: border-color .15s, color .15s;
   white-space: nowrap;
 }
-.history-trigger:hover { border-color: var(--accent); color: var(--accent); }
+.history-trigger:hover { border-color: var(--muted); color: var(--text); }
 .history-trigger.has-items { color: var(--text); font-weight: 500; }
 
 /* ── Card ── */
@@ -636,10 +643,9 @@ body {
   gap: 10px;
 }
 .card-title {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 500;
   color: var(--text);
-  letter-spacing: .3px;
 }
 .card-body { padding: 16px 18px; }
 
@@ -658,17 +664,17 @@ body {
   align-items: center;
   justify-content: space-between;
 }
-.history-title { font-size: 13px; font-weight: 600; }
+.history-title { font-size: 14px; font-weight: 500; }
 .history-close {
   font-size: 12px; color: var(--muted); background: none; border: none;
-  cursor: pointer; padding: 4px 8px; border-radius: 6px;
+  cursor: pointer; padding: 4px 8px; border-radius: var(--pill);
   transition: color .15s;
 }
-.history-close:hover { color: var(--accent); }
+.history-close:hover { color: var(--text); }
 .history-empty {
   padding: 24px 18px;
   text-align: center;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--muted);
 }
 .history-list { max-height: 360px; overflow-y: auto; }
@@ -685,26 +691,26 @@ body {
 .history-item:hover { background: var(--bg); }
 .history-item-icon {
   width: 36px; height: 36px;
-  border-radius: 8px;
-  background: var(--accent-light);
+  border-radius: var(--radius-input);
+  background: var(--skeleton);
   display: flex; align-items: center; justify-content: center;
   font-size: 16px; flex-shrink: 0;
 }
 .history-item-body { flex: 1; min-width: 0; }
 .history-item-prompt {
-  font-size: 13px; font-weight: 500;
+  font-size: 14px; font-weight: 500;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.history-item-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.history-item-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
 .history-item-load {
-  font-size: 11px; color: var(--accent);
+  font-size: 12px; color: var(--accent);
   background: none; border: 1px solid var(--border);
-  border-radius: 6px; cursor: pointer;
+  border-radius: var(--pill); cursor: pointer;
   padding: 4px 10px;
   white-space: nowrap;
   transition: border-color .15s;
 }
-.history-item-load:hover { border-color: var(--accent); }
+.history-item-load:hover { border-color: var(--muted); }
 .history-footer {
   padding: 12px 18px;
   border-top: 1px solid var(--border);
@@ -715,7 +721,7 @@ body {
 .history-clear-btn {
   font-size: 12px; color: var(--red);
   background: none; border: 1px solid var(--border);
-  border-radius: 8px; cursor: pointer; padding: 6px 12px;
+  border-radius: var(--pill); cursor: pointer; padding: 6px 12px;
   transition: border-color .15s;
 }
 .history-clear-btn:hover { border-color: var(--red); }
@@ -728,8 +734,8 @@ body {
 .store-btn {
   flex: 1;
   padding: 10px 8px;
-  border: 1.5px solid var(--border);
-  border-radius: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-input);
   background: var(--bg);
   cursor: pointer;
   display: flex;
@@ -744,11 +750,10 @@ body {
   border-color: transparent;
 }
 .store-name {
-  font-family: 'Bebas Neue', sans-serif;
-  font-size: 13px;
-  letter-spacing: .5px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
 }
-.store-sub { font-size: 10px; color: var(--muted); }
+.store-sub { font-size: 12px; color: var(--muted); }
 
 /* Compare button */
 .compare-btn {
@@ -756,8 +761,8 @@ body {
   width: 100%;
   margin-top: 10px;
   padding: 9px;
-  border: 1.5px dashed var(--border);
-  border-radius: 10px;
+  border: 1px dashed var(--border);
+  border-radius: var(--pill);
   background: none;
   font-size: 12px;
   color: var(--muted);
@@ -777,9 +782,9 @@ body {
 .trade-chip {
   padding: 12px 16px;
   border: 1px solid var(--border);
-  border-radius: 20px;
+  border-radius: var(--pill);
   background: var(--bg);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   color: var(--muted);
   cursor: pointer;
@@ -790,7 +795,7 @@ body {
   min-height: 44px;
   font-family: 'DM Sans', sans-serif;
 }
-.trade-chip:hover { border-color: var(--accent); color: var(--accent); }
+.trade-chip:hover { border-color: var(--muted); color: var(--text); }
 .trade-chip.active {
   background: var(--accent-light);
   border-color: var(--accent);
@@ -803,13 +808,13 @@ body {
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 18px;
+  font-size: 16px;
   color: var(--muted);
   line-height: 1;
   padding: 0 4px;
   transition: color .15s;
 }
-.section-toggle:hover { color: var(--accent); }
+.section-toggle:hover { color: var(--text); }
 .meas-grid {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr auto;
@@ -822,19 +827,17 @@ body {
   gap: 4px;
 }
 .meas-field label {
-  font-size: 11px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 500;
   color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: .4px;
 }
 .meas-field input,
 .meas-field select {
   padding: 8px 10px;
-  border: 1.5px solid var(--border);
-  border-radius: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-input);
   font-family: 'DM Sans', sans-serif;
-  font-size: 13px;
+  font-size: 14px;
   background: var(--surface);
   color: var(--text);
   outline: none;
@@ -845,7 +848,7 @@ body {
 .meas-field select:focus { border-color: var(--accent); }
 .meas-hint {
   margin-top: 8px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
   line-height: 1.5;
 }
@@ -858,8 +861,8 @@ textarea {
   width: 100%;
   min-height: 110px;
   padding: 12px 14px;
-  border: 1.5px solid var(--border);
-  border-radius: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-input);
   font-family: 'DM Sans', sans-serif;
   font-size: 14px;
   line-height: 1.6;
@@ -870,12 +873,12 @@ textarea {
   transition: border-color .15s;
 }
 textarea:focus { border-color: var(--accent); }
-textarea::placeholder { color: #b0b0a8; }
+textarea::placeholder { color: var(--placeholder); }
 .char-count {
   position: absolute;
   bottom: 10px;
   right: 12px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
   pointer-events: none;
 }
@@ -885,7 +888,7 @@ textarea::placeholder { color: #b0b0a8; }
 .mic-btn {
   padding: 5px 10px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--pill);
   background: var(--bg);
   cursor: pointer;
   font-size: 14px;
@@ -893,7 +896,7 @@ textarea::placeholder { color: #b0b0a8; }
   line-height: 1;
   font-family: 'DM Sans', sans-serif;
 }
-.mic-btn:hover { border-color: var(--accent); }
+.mic-btn:hover { border-color: var(--muted); }
 .mic-btn.recording {
   background: var(--red-bg);
   border-color: var(--red);
@@ -910,13 +913,13 @@ textarea::placeholder { color: #b0b0a8; }
 .submit-btn {
   flex: 1;
   padding: 13px;
-  background: var(--accent);
-  color: white;
+  background: var(--ink);
+  color: #fff;
   border: none;
-  border-radius: 10px;
+  border-radius: var(--pill);
   font-family: 'DM Sans', sans-serif;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
   transition: opacity .15s, transform .1s;
   display: flex;
@@ -930,15 +933,15 @@ textarea::placeholder { color: #b0b0a8; }
 .clear-btn {
   padding: 13px 16px;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--pill);
   background: var(--bg);
-  font-size: 13px;
+  font-size: 14px;
   color: var(--muted);
   cursor: pointer;
   transition: border-color .15s;
   font-family: 'DM Sans', sans-serif;
 }
-.clear-btn:hover { border-color: var(--accent); color: var(--accent); }
+.clear-btn:hover { border-color: var(--muted); color: var(--text); }
 
 /* ── Results ── */
 .results-card { display: none; }
@@ -954,13 +957,12 @@ textarea::placeholder { color: #b0b0a8; }
   padding: 12px;
   border: none;
   background: var(--bg);
-  font-family: 'Bebas Neue', sans-serif;
+  font-family: 'DM Sans', sans-serif;
   font-size: 14px;
-  letter-spacing: .5px;
   cursor: pointer;
   transition: background .15s;
   text-align: center;
-  border-bottom: 3px solid transparent;
+  border-bottom: 2px solid transparent;
 }
 .compare-tab.active {
   background: var(--surface);
@@ -972,12 +974,12 @@ textarea::placeholder { color: #b0b0a8; }
   display: flex;
   padding: 10px 18px;
   background: var(--blue-bg);
-  border-bottom: 1px solid #c5d9fc;
+  border-bottom: 1px solid var(--border);
   gap: 24px;
   font-size: 12px;
 }
-.compare-summary-store { font-weight: 600; }
-.compare-summary-total { color: var(--muted); margin-top: 1px; }
+.compare-summary-store { font-weight: 500; }
+.compare-summary-total { color: #5f5d58; margin-top: 1px; }  /* darker than --muted: this sits on a tinted row */
 
 .trip-banner {
   padding: 12px 18px;
@@ -985,30 +987,30 @@ textarea::placeholder { color: #b0b0a8; }
   align-items: center;
   gap: 10px;
   background: var(--green-bg);
-  border-bottom: 1px solid #c3e6cb;
+  border-bottom: 1px solid var(--border);
 }
-.trip-icon { font-size: 20px; }
-.trip-text { font-size: 13px; color: var(--green); font-weight: 500; }
+.trip-icon { font-size: 16px; }
+.trip-text { font-size: 14px; color: var(--green); font-weight: 500; }
 .trip-count { font-size: 12px; color: var(--green); opacity: .8; }
 
 .notes-block {
   padding: 12px 18px;
   background: var(--orange-bg);
-  border-bottom: 1px solid #ffe0a0;
-  font-size: 13px;
+  border-bottom: 1px solid var(--orange-border);
+  font-size: 14px;
   color: var(--orange);
   line-height: 1.6;
 }
-.notes-label { font-weight: 600; margin-bottom: 3px; }
+.notes-label { font-weight: 500; margin-bottom: 3px; }
 
 /* Tools block */
 .tools-block { border-bottom: 1px solid var(--border); }
 .tools-header {
   padding: 10px 18px;
   background: var(--blue-bg);
-  border-bottom: 1px solid #c5d9fc;
-  font-size: 13px;
-  font-weight: 600;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+  font-weight: 500;
   color: var(--blue);
 }
 .tool-list { padding: 4px 0; }
@@ -1020,7 +1022,7 @@ textarea::placeholder { color: #b0b0a8; }
   border-bottom: 1px solid var(--border);
 }
 .tool-item:last-child { border-bottom: none; }
-.tool-item-name { font-size: 13px; font-weight: 600; color: var(--text); min-width: 160px; flex-shrink: 0; }
+.tool-item-name { font-size: 14px; font-weight: 500; color: var(--text); min-width: 160px; flex-shrink: 0; }
 .tool-item-why  { font-size: 12px; color: var(--muted); line-height: 1.5; }
 
 /* Material item */
@@ -1035,29 +1037,24 @@ textarea::placeholder { color: #b0b0a8; }
   cursor: pointer;
 }
 .agree-badge {
-  font-size: 11px;
+  font-size: 12px;
   margin-top: 5px;
   display: inline-block;
   padding: 2px 8px;
-  border-radius: 10px;
+  border-radius: var(--pill);
   font-weight: 500;
 }
-.agree-badge.strong { background: #e8f5ec; color: #1e7e45; }
-.agree-badge.weak   { background: #fef6ec; color: #a86a10; }
+.agree-badge.strong { background: var(--accent-light); color: var(--accent); }
+.agree-badge.weak   { background: var(--orange-bg); color: var(--orange); }
 
-  border-style: solid;
-  border-color: var(--accent);
-  background: var(--accent-light);
-}
-.plan-tag.free { background: #6f6e68; }
+.plan-tag.free { background: var(--muted); }
 .plan-tag {
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: .5px;
-  background: var(--accent);
+  font-size: 12px;
+  font-weight: 500;
+  background: var(--ink);
   color: #fff;
   padding: 1px 5px;
-  border-radius: 4px;
+  border-radius: var(--pill);
   margin-left: 5px;
   vertical-align: 1px;
 }
@@ -1070,7 +1067,7 @@ textarea::placeholder { color: #b0b0a8; }
 .item-check {
   width: 26px;
   height: 26px;
-  border: 1.5px solid var(--border);
+  border: 1px solid var(--border);
   border-radius: 6px;
   flex-shrink: 0;
   margin-top: 1px;
@@ -1088,7 +1085,7 @@ textarea::placeholder { color: #b0b0a8; }
 }
 
 .item-body { flex: 1; min-width: 0; }
-.material-name { font-size: 13px; font-weight: 600; color: var(--text); }
+.material-name { font-size: 14px; font-weight: 500; color: var(--text); }
 .material-spec { font-size: 12px; color: var(--muted); margin-top: 2px; line-height: 1.5; }
 
 .item-meta {
@@ -1100,19 +1097,19 @@ textarea::placeholder { color: #b0b0a8; }
 }
 .qty-badge {
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text);
   white-space: nowrap;
 }
 .aisle-badge {
-  font-size: 11px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 500;
   padding: 3px 7px;
-  border-radius: 6px;
+  border-radius: var(--pill);
   white-space: nowrap;
 }
 .price-est {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
   white-space: nowrap;
 }
@@ -1128,13 +1125,13 @@ textarea::placeholder { color: #b0b0a8; }
   gap: 8px;
   background: var(--bg);
 }
-.total-line { font-size: 13px; color: var(--muted); }
-.total-line strong { color: var(--text); font-size: 15px; }
+.total-line { font-size: 14px; color: var(--muted); }
+.total-line strong { color: var(--text); font-size: 16px; }
 .action-row { display: flex; gap: 8px; }
 .icon-btn {
   padding: 7px 13px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--pill);
   background: var(--surface);
   font-size: 12px;
   font-weight: 500;
@@ -1146,7 +1143,7 @@ textarea::placeholder { color: #b0b0a8; }
   transition: border-color .15s, color .15s;
   font-family: 'DM Sans', sans-serif;
 }
-.icon-btn:hover { border-color: var(--accent); color: var(--accent); }
+.icon-btn:hover { border-color: var(--muted); color: var(--text); }
 
 /* ── Loading ── */
 .loading-state {
@@ -1186,10 +1183,10 @@ textarea::placeholder { color: #b0b0a8; }
   display: none;
   padding: 14px 18px;
   background: var(--red-bg);
-  border-radius: var(--radius);
-  font-size: 13px;
+  border-radius: var(--radius-input);
+  font-size: 14px;
   color: var(--red);
-  border: 1px solid #f5c6cb;
+  border: 1px solid var(--red-border);
 }
 .error-msg.show { display: block; }
 
@@ -1205,11 +1202,11 @@ textarea::placeholder { color: #b0b0a8; }
   padding: 12px 14px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-input);
   font-size: 12px;
   line-height: 1.5;
 }
-.tip strong { display: block; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
+.tip strong { display: block; font-size: 12px; color: var(--muted);margin-bottom: 4px; }
 
 .ico { vertical-align: -2px; margin-right: 4px; flex-shrink: 0; }
 button .ico:only-child { margin-right: 0; }
@@ -1217,13 +1214,13 @@ button .ico:only-child { margin-right: 0; }
 /* ── Usage indicator ── */
 .usage-pill {
   display: flex; align-items: center; gap: 7px;
-  border: 1px solid var(--border); border-radius: 99px;
+  border: 1px solid var(--border); border-radius: var(--pill);
   background: var(--surface); padding: 5px 12px 5px 9px;
   font-family: 'DM Sans', sans-serif; font-size: 12px;
   color: var(--muted); cursor: pointer; min-height: 34px;
   transition: border-color .15s, color .15s;
 }
-.usage-pill:hover { border-color: var(--accent); color: var(--accent); }
+.usage-pill:hover { border-color: var(--muted); color: var(--text); }
 
 /* The ring empties as the allowance is used. --pct is set from JS. */
 .usage-ring {
@@ -1237,8 +1234,8 @@ button .ico:only-child { margin-right: 0; }
   border-radius: 50%; background: var(--surface);
 }
 .usage-count { font-weight: 500; font-variant-numeric: tabular-nums; }
-.usage-pill.low   { border-color: #e8c07d; color: var(--orange); }
-.usage-pill.spent { border-color: #eab5ac; color: var(--red); }
+.usage-pill.low   { border-color: var(--orange-border); color: var(--orange); }
+.usage-pill.spent { border-color: var(--red-border); color: var(--red); }
 
 @media (max-width: 480px) { .usage-pill { padding: 5px 10px 5px 8px; } }
 @media print { .usage-pill { display: none; } }
@@ -1246,15 +1243,15 @@ button .ico:only-child { margin-right: 0; }
 .item-flag {
   margin-top: 6px;
   padding: 3px 9px;
-  font-size: 10.5px;
+  font-size: 12px;
   font-family: 'DM Sans', sans-serif;
   color: var(--muted);
   background: transparent;
   border: 1px dashed var(--border);
-  border-radius: 9px;
+  border-radius: var(--pill);
   cursor: pointer;
 }
-.item-flag:hover { border-color: var(--accent); color: var(--accent); }
+.item-flag:hover { border-color: var(--muted); color: var(--text); }
 .item-flag.flagged {
   border-style: solid; border-color: var(--green);
   color: var(--green); background: var(--green-bg); cursor: default;
@@ -1275,18 +1272,18 @@ button .ico:only-child { margin-right: 0; }
   z-index: 10000;
   display: none; gap: 14px; align-items: center; flex-wrap: wrap;
   padding: 14px 18px; background: var(--surface);
-  border-top: 1px solid var(--border); box-shadow: 0 -2px 14px rgba(0,0,0,.10);
+  border-top: 1px solid var(--border); box-shadow: none;
 }
 .cookie-banner.show { display: flex; }
-.cookie-text { flex: 1; min-width: 240px; font-size: 13px; color: var(--text); line-height: 1.5; }
+.cookie-text { flex: 1; min-width: 240px; font-size: 14px; color: var(--text); line-height: 1.5; }
 .cookie-text a { color: var(--accent); }
 .cookie-actions { display: flex; gap: 8px; flex-shrink: 0; }
 .cookie-btn {
-  padding: 9px 16px; border-radius: 8px; font-size: 13px; font-weight: 500;
+  padding: 9px 16px; border-radius: var(--pill); font-size: 14px; font-weight: 500;
   font-family: inherit; cursor: pointer; border: 1px solid var(--border);
   background: var(--bg); color: var(--text);
 }
-.cookie-btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.cookie-btn.primary { background: var(--ink); border-color: var(--ink); color: #fff; }
 .cookie-btn:hover { opacity: .9; }
 @media (max-width: 520px) {
   .cookie-actions { width: 100%; }
@@ -1301,7 +1298,7 @@ button .ico:only-child { margin-right: 0; }
   display: flex; align-items: center; gap: 8px;
   padding: 9px 12px; margin-bottom: 14px;
   background: var(--blue-bg); border: 1px solid var(--border);
-  border-radius: 8px; font-size: 11.5px; color: var(--text); line-height: 1.45;
+  border-radius: var(--radius-input); font-size: 12px; color: var(--text); line-height: 1.45;
 }
 .ai-label svg { flex-shrink: 0; color: var(--blue); }
 .ai-label a { color: var(--blue); }
@@ -1313,18 +1310,18 @@ button .ico:only-child { margin-right: 0; }
   background: var(--surface); border: 1px solid var(--border);
   border-radius: var(--radius); padding: 20px; margin: 28px 0 4px;
 }
-.updates-title { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
-.updates-sub { font-size: 12.5px; color: var(--muted); margin-bottom: 14px; line-height: 1.5; }
+.updates-title { font-size: 16px; font-weight: 500; margin-bottom: 4px; }
+.updates-sub { font-size: 12px; color: var(--muted); margin-bottom: 14px; line-height: 1.5; }
 .updates-row { display: flex; gap: 8px; flex-wrap: wrap; }
 .updates-row input[type="email"] {
   flex: 1; min-width: 200px; background: var(--bg);
-  border: 1px solid var(--border); border-radius: 8px;
+  border: 1px solid var(--border); border-radius: var(--radius-input);
   padding: 10px 12px; font-size: 14px; font-family: inherit; color: var(--text);
 }
 .updates-row input[type="email"]:focus { outline: none; border-color: var(--accent); }
 .updates-row button {
-  padding: 10px 18px; border: 1px solid var(--accent); border-radius: 8px;
-  background: var(--accent); color: #fff; font-size: 14px; font-weight: 500;
+  padding: 10px 18px; border: 1px solid var(--ink); border-radius: var(--radius);
+  background: var(--ink); color: #fff; font-size: 14px; font-weight: 500;
   font-family: inherit; cursor: pointer;
 }
 .updates-row button:disabled { opacity: .55; cursor: default; }
@@ -1333,7 +1330,7 @@ button .ico:only-child { margin-right: 0; }
   margin-top: 12px; font-size: 12px; color: var(--muted); line-height: 1.5;
 }
 .updates-consent input { margin-top: 2px; flex-shrink: 0; }
-.updates-msg { font-size: 12.5px; margin-top: 10px; display: none; }
+.updates-msg { font-size: 12px; margin-top: 10px; display: none; }
 .updates-msg.show { display: block; }
 .updates-msg.ok { color: var(--green); }
 .updates-msg.bad { color: var(--red); }
@@ -1342,20 +1339,20 @@ button .ico:only-child { margin-right: 0; }
 .photo-strip {
   display: flex; align-items: center; gap: 12px;
   background: var(--bg); border: 1px solid var(--border);
-  border-radius: 10px; padding: 10px; margin-bottom: 12px;
+  border-radius: var(--radius-input); padding: 10px; margin-bottom: 12px;
 }
 .photo-strip img {
   width: 60px; height: 60px; object-fit: cover;
-  border-radius: 8px; flex-shrink: 0; background: #ddd;
+  border-radius: var(--radius-input); flex-shrink: 0; background: var(--subtle);
 }
 .photo-meta { flex: 1; min-width: 0; }
-.photo-name { font-size: 12.5px; font-weight: 500; color: var(--text); }
-.photo-hint { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.photo-name { font-size: 12px; font-weight: 500; color: var(--text); }
+.photo-hint { font-size: 12px; color: var(--muted); margin-top: 2px; }
 .photo-remove {
   width: 30px; height: 30px; flex-shrink: 0;
-  border: 1px solid var(--border); border-radius: 8px;
+  border: 1px solid var(--border); border-radius: var(--pill);
   background: var(--surface); color: var(--muted);
-  cursor: pointer; font-size: 13px; line-height: 1;
+  cursor: pointer; font-size: 14px; line-height: 1;
 }
 .photo-remove:hover { border-color: var(--red); color: var(--red); }
 
@@ -1368,48 +1365,48 @@ button .ico:only-child { margin-right: 0; }
 }
 .ack-card {
   background: var(--surface); border: 1px solid var(--border);
-  border-radius: 16px; padding: 32px 30px;
+  border-radius: var(--radius); padding: 32px 30px;
   max-width: 460px; width: 100%; margin: auto;
 }
-.ack-icon { font-size: 30px; margin-bottom: 10px; }
-.ack-title { font-size: 20px; font-weight: 600; margin-bottom: 8px; }
-.ack-lede { font-size: 14px; color: #333330; line-height: 1.6; margin-bottom: 18px; }
+.ack-icon { font-size: 16px; margin-bottom: 10px; }
+.ack-title { font-size: 16px; font-weight: 500; margin-bottom: 8px; }
+.ack-lede { font-size: 14px; color: var(--text); line-height: 1.6; margin-bottom: 18px; }
 .ack-list { list-style: none; margin-bottom: 20px; }
 .ack-list li {
-  font-size: 13px; color: #4a4a45; line-height: 1.5;
+  font-size: 14px; color: var(--ink); line-height: 1.5;
   padding: 9px 0 9px 22px; position: relative;
   border-bottom: 1px solid var(--border);
 }
 .ack-list li:last-child { border-bottom: none; }
 .ack-list li::before {
-  content: '•'; position: absolute; left: 6px; color: var(--accent); font-weight: 700;
+  content: '•'; position: absolute; left: 6px; color: var(--muted); font-weight: 500;
 }
 .ack-sub {
-  font-size: 11px; font-weight: 600; letter-spacing: .6px;
-  text-transform: uppercase; color: var(--muted);
+  font-size: 12px; font-weight: 500;
+color: var(--muted);
   margin: 4px 0 2px;
 }
-.ack-data li::before { content: '\2022'; font-size: 11px; }
+.ack-data li::before { content: '\2022'; font-size: 12px; }
 .ack-check a { color: var(--accent); }
 .ack-check {
   display: flex; gap: 10px; align-items: flex-start;
   background: var(--bg); border: 1px solid var(--border);
-  border-radius: 10px; padding: 13px 14px; margin-bottom: 14px;
-  cursor: pointer; font-size: 13px; line-height: 1.45; color: var(--text);
+  border-radius: var(--radius-input); padding: 13px 14px; margin-bottom: 14px;
+  cursor: pointer; font-size: 14px; line-height: 1.45; color: var(--text);
 }
 .ack-check input { margin-top: 2px; width: 17px; height: 17px; accent-color: var(--accent); flex-shrink: 0; cursor: pointer; }
 .ack-btn {
-  width: 100%; padding: 13px; border: none; border-radius: 10px;
-  background: var(--accent); color: #fff; font-size: 14.5px; font-weight: 500;
+  width: 100%; padding: 13px; border: none; border-radius: var(--pill);
+  background: var(--ink); color: #fff; font-size: 14px; font-weight: 500;
   font-family: 'DM Sans', sans-serif; cursor: pointer; min-height: 46px;
 }
-.ack-btn:disabled { background: #dcdad2; color: #97968e; cursor: not-allowed; }
-.ack-btn:not(:disabled):hover { background: #d24d1f; }
+.ack-btn:disabled { background: var(--subtle); color: var(--placeholder); cursor: not-allowed; }
+.ack-btn:not(:disabled):hover { background: #000; }
 .ack-link {
   display: block; text-align: center; margin-top: 12px;
-  font-size: 12.5px; color: var(--muted); text-decoration: none;
+  font-size: 12px; color: var(--muted); text-decoration: none;
 }
-.ack-link:hover { color: var(--accent); text-decoration: underline; }
+.ack-link:hover { color: var(--text); text-decoration: underline; }
 
 .site-footer {
   margin-top: 26px;
@@ -1418,7 +1415,7 @@ button .ico:only-child { margin-right: 0; }
   border-top: 1px solid var(--border);
 }
 .ai-note {
-  font-size: 11.5px;
+  font-size: 12px;
   color: var(--muted);
   line-height: 1.55;
   max-width: 520px;
@@ -1427,10 +1424,129 @@ button .ico:only-child { margin-right: 0; }
 .footer-links { font-size: 12px; margin-bottom: 8px; }
 .footer-links a { color: var(--muted); text-decoration: none; }
 .footer-links a:hover { color: var(--accent); text-decoration: underline; }
-.footer-links span { color: var(--border); margin: 0 7px; }
-.footer-copy { font-size: 11px; color: #a5a49c; }
+.footer-links span { color: var(--muted); margin: 0 7px; }
+.footer-copy { font-size: 12px; color: var(--muted); }
 
 @media print { .site-footer { display: none; } }
+
+/* ── Landing ──
+   Follows the same tokens as the app. One deliberate exception to the 12/14/16
+   type scale: the page needs a real h1, and a 16px one reads as body text. */
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.skip-landing .landing { display: none; }
+.landing { width: 100%; max-width: 640px; color: var(--text); }
+.landing a { color: var(--accent); }
+.lp-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 32px; }
+.lp-brand { display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 500; color: var(--text) !important; text-decoration: none; }
+.lp-mark {
+  width: 32px; height: 32px; border-radius: var(--radius-input); background: var(--accent);
+  color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 500;
+}
+.lp-nav { display: flex; align-items: center; gap: 16px; font-size: 14px; }
+.lp-nav a { color: var(--ink) !important; text-decoration: none; }
+.lp-nav a:hover { text-decoration: underline; }
+.lp-signin {
+  font: inherit; font-size: 14px; font-weight: 500; color: var(--ink); background: var(--surface);
+  border: 1px solid var(--border); border-radius: var(--pill); padding: 8px 16px; min-height: 36px; cursor: pointer;
+}
+.lp-signin:hover { background: var(--subtle); }
+.lp-hero { margin-bottom: 32px; }
+.lp-eyebrow { font-size: 14px; color: var(--muted); margin-bottom: 8px; }
+.lp-hero h1 { font-size: 28px; line-height: 1.25; font-weight: 500; margin-bottom: 12px; }
+.lp-lede { font-size: 16px; line-height: 1.5; color: var(--ink); margin-bottom: 16px; }
+.lp-input {
+  display: flex; align-items: center; gap: 8px; background: var(--surface);
+  border: 1px solid var(--border); border-radius: var(--radius-input); padding: 8px 8px 8px 4px;
+  box-shadow: var(--shadow);
+}
+.lp-input:focus-within { border-color: var(--accent); }
+.lp-input input {
+  flex: 1; min-width: 0; border: 0; outline: none; background: transparent;
+  font: inherit; font-size: 16px; color: var(--text); padding: 8px 0;
+}
+.lp-input input::placeholder { color: var(--placeholder); }
+.lp-go {
+  width: 40px; height: 40px; flex-shrink: 0; border: 0; border-radius: var(--pill);
+  background: var(--ink); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer;
+}
+.lp-go:hover { background: #000; }
+.lp-attach {
+  width: 40px; height: 40px; flex-shrink: 0; border: 0; border-radius: var(--pill);
+  background: transparent; color: var(--muted); display: flex; align-items: center; justify-content: center; cursor: pointer;
+}
+.lp-attach:hover { background: var(--subtle); color: var(--ink); }
+.lp-media {
+  display: flex; align-items: center; gap: 8px; margin-top: 8px; padding: 4px 4px 4px 4px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--pill); width: fit-content;
+  font-size: 14px; color: var(--ink);
+}
+.lp-media[hidden] { display: none; }
+.lp-media img { width: 32px; height: 32px; object-fit: cover; border-radius: var(--pill); }
+.lp-media button {
+  font: inherit; font-size: 12px; color: var(--muted); background: transparent; border: 0;
+  border-radius: var(--pill); padding: 4px 10px; cursor: pointer;
+}
+.lp-media button:hover { background: var(--subtle); color: var(--ink); }
+.lp-media-msg { display: none; font-size: 12px; color: var(--red); margin-top: 8px; }
+.lp-media-msg.show { display: block; }
+/* The type system has two weights; <strong> would otherwise render at 700. */
+strong, b { font-weight: 500; }
+.lp-trades { border: 0; display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.lp-trades label { position: relative; cursor: pointer; }
+.lp-trades input { position: absolute; opacity: 0; inset: 0; cursor: pointer; }
+.lp-trades span {
+  display: inline-flex; align-items: center; min-height: 36px; padding: 6px 14px;
+  border: 1px solid var(--border); border-radius: var(--pill); background: var(--surface);
+  font-size: 14px; color: var(--ink);
+}
+.lp-trades label:hover span { background: var(--subtle); }
+.lp-trades input:checked + span { background: var(--accent-light); border-color: var(--accent); color: var(--accent); font-weight: 500; }
+.lp-trades input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+.lp-fine { font-size: 12px; color: var(--muted); margin-top: 12px; line-height: 1.5; }
+.lp-section { margin-bottom: 32px; }
+.lp-section h2 { font-size: 16px; font-weight: 500; margin-bottom: 12px; }
+.lp-section h3 { font-size: 14px; font-weight: 500; color: var(--muted); margin: 16px 0 8px; }
+.lp-steps { list-style: none; counter-reset: step; display: grid; gap: 8px; }
+.lp-steps li, .lp-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 12px 16px; font-size: 14px; line-height: 1.5;
+}
+.lp-steps li { counter-increment: step; display: grid; grid-template-columns: 28px 1fr; column-gap: 8px; }
+.lp-steps li::before {
+  content: counter(step); grid-row: span 2; width: 24px; height: 24px; border-radius: var(--pill);
+  background: var(--subtle); color: var(--ink); font-size: 12px; font-weight: 500;
+  display: flex; align-items: center; justify-content: center;
+}
+.lp-steps strong, .lp-card strong { font-weight: 500; display: block; }
+.lp-steps span, .lp-card p { color: var(--muted); }
+.lp-two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.lp-guide-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.lp-guide-grid a {
+  display: block; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 12px 16px; text-decoration: none; font-size: 14px; line-height: 1.5;
+}
+.lp-guide-grid a:hover { background: var(--subtle); }
+.lp-guide-grid strong { display: block; color: var(--text); font-weight: 500; }
+.lp-guide-grid span { color: var(--muted); }
+.lp-jobs { list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; font-size: 14px; }
+.lp-jobs a { display: inline-block; padding: 4px 0; }
+.lp-faq { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+.lp-faq details + details { border-top: 1px solid var(--border); }
+.lp-faq summary { cursor: pointer; padding: 12px 16px; font-size: 14px; font-weight: 500; list-style-position: inside; }
+.lp-faq summary:hover { background: var(--bg); }
+.lp-faq p { padding: 0 16px 12px; font-size: 14px; line-height: 1.5; color: var(--muted); }
+.lp-foot { border-top: 1px solid var(--border); padding-top: 16px; font-size: 12px; line-height: 1.5; color: var(--muted); display: grid; gap: 8px; }
+.lp-foot nav { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+@media (max-width: 520px) {
+  .lp-two, .lp-guide-grid, .lp-jobs { grid-template-columns: 1fr; }
+  .lp-hero h1 { font-size: 24px; }
+  .lp-nav a { display: none; }
+}
+@media print { .landing { display: none; } }
 
 @media (max-width: 480px) {
   body { padding: 12px 10px 40px; }
@@ -1441,7 +1557,7 @@ button .ico:only-child { margin-right: 0; }
 }
 
 @media print {
-  body { background: white; padding: 0; }
+  body { background: var(--surface); padding: 0; }
   .card { box-shadow: none; border: 1px solid #ccc; }
   .submit-row, .action-row, .header, .tip-row,
   #inputCard, #loadingCard, .history-panel,
@@ -1452,9 +1568,134 @@ button .ico:only-child { margin-right: 0; }
 </style>
 </head>
 <body>
+<script>
+  // Returning visitors and links from the repair guides go straight to the app,
+  // decided before first paint so the landing page never flashes. The key must
+  // match AI_ACK_KEY in the main script.
+  try {
+    if (localStorage.getItem('diagnostech_ai_ack_v3') === 'yes' || /[?&](job|trade)=/.test(location.search)) {
+      document.documentElement.classList.add('skip-landing');
+    }
+  } catch (e) { /* storage blocked: show the landing page */ }
+</script>
+
+<!-- ── Landing ──
+     What first-time visitors and search engines see. Before this, both landed
+     on a sign-in screen that said "Welcome back": 96 words, no headings, which
+     Google indexed as a thin login page. The form is a plain GET to /, so it
+     works without JavaScript and hands the job to the app as ?job=&trade=. -->
+<div id="landing" class="landing">
+  <header class="lp-top">
+    <a class="lp-brand" href="/"><span class="lp-mark" aria-hidden="true">AD</span>Ask Danny</a>
+    <nav class="lp-nav" aria-label="Site">
+      <a href="#guides">Repair guides</a>
+      <button type="button" class="lp-signin" data-act="openSignIn">Sign in</button>
+    </nav>
+  </header>
+
+  <main>
+    <section class="lp-hero" aria-labelledby="lpTitle">
+      <p class="lp-eyebrow">Free AI parts lists for home and auto repairs</p>
+      <h1 id="lpTitle">Describe what's broken. Get every part in one trip.</h1>
+      <p class="lp-lede">Ask Danny turns a repair problem, a photo or a short video into a parts list with aisle numbers for Home Depot, Lowe's and AutoZone. Built for homeowners and the trades. No account needed.</p>
+
+      <form class="lp-ask" action="/" method="get" data-act-submit="submitLanding">
+        <label class="sr-only" for="lpJob">What needs fixing?</label>
+        <div class="lp-input">
+          <button type="button" class="lp-attach" data-act="openPhotoPicker"
+                  title="Add a photo or video" aria-label="Add a photo or video of the problem">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          </button>
+          <input id="lpJob" name="job" type="text" maxlength="800" required
+                 placeholder="e.g. my toilet keeps running" autocomplete="off">
+          <button type="submit" class="lp-go" aria-label="Build my parts list">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg>
+          </button>
+        </div>
+        <div class="lp-media" id="lpMedia" hidden>
+          <img id="lpMediaThumb" alt="Attached photo or video frames">
+          <span id="lpMediaName">Photo attached</span>
+          <button type="button" data-act="clearPhoto" aria-label="Remove the attached photo or video">Remove</button>
+        </div>
+        <p class="lp-media-msg" id="lpMediaMsg" role="alert"></p>
+        <fieldset class="lp-trades">
+          <legend class="sr-only">Trade</legend>
+          <label><input type="radio" name="trade" value="plumbing" checked><span>Plumbing</span></label>
+          <label><input type="radio" name="trade" value="hvac"><span>HVAC</span></label>
+          <label><input type="radio" name="trade" value="carpentry"><span>Carpentry</span></label>
+          <label><input type="radio" name="trade" value="auto"><span>Auto</span></label>
+          <label><input type="radio" name="trade" value="appliance"><span>Appliance</span></label>
+        </fieldset>
+      </form>
+      <p class="lp-fine">Aisle numbers and prices are estimates. For gas, electrical or structural work, hire a licensed professional.</p>
+    </section>
+
+    <section class="lp-section" aria-labelledby="lpHow">
+      <h2 id="lpHow">How it works</h2>
+      <ol class="lp-steps">
+        <li><strong>Describe the job</strong><span>Type what's wrong, say it out loud, or add a photo or video.</span></li>
+        <li><strong>Pick your store</strong><span>Home Depot, Lowe's or AutoZone, or compare Home Depot and Lowe's side by side.</span></li>
+        <li><strong>Get the list</strong><span>Parts, specs and quantities with aisle numbers and price estimates, plus the tools and what to check first.</span></li>
+      </ol>
+    </section>
+
+    <section id="guides" class="lp-section" aria-labelledby="lpGuides">
+      <h2 id="lpGuides">Repair guides</h2>
+      <!-- GUIDE_LINKS: filled in by scripts/build.js from content/guides.js -->
+    </section>
+
+    <section class="lp-section" aria-labelledby="lpWho">
+      <h2 id="lpWho">Built for blue-collar work</h2>
+      <div class="lp-two">
+        <div class="lp-card"><strong>Homeowners and renters</strong><p>Know what to buy before you leave, instead of making three trips for one repair.</p></div>
+        <div class="lp-card"><strong>Tradespeople and contractors</strong><p>Turn a job description into a supply-run list with quantities before you head to the next site.</p></div>
+      </div>
+    </section>
+
+    <section class="lp-section" aria-labelledby="lpFaq">
+      <h2 id="lpFaq">Questions</h2>
+      <div class="lp-faq">
+        <details>
+          <summary>Is Ask Danny free?</summary>
+          <p>Yes. There is nothing to buy and no card to enter. You can build lists as a guest without an account. To keep it free, each connection gets a limited number of lists per day.</p>
+        </details>
+        <details>
+          <summary>Which stores does it cover?</summary>
+          <p>Home Depot and Lowe's for home repairs, and AutoZone for car parts.</p>
+        </details>
+        <details>
+          <summary>Are the aisle numbers exact?</summary>
+          <p>No. They are estimates. Store layouts differ and change after remodels, and prices will not match your receipt exactly. Items that were not matched to our product database are marked with an asterisk.</p>
+        </details>
+        <details>
+          <summary>Does it tell me how to do the repair?</summary>
+          <p>It tells you what to buy and what to check first, not how to do the job. For gas, electrical, structural or permitted work, hire a licensed professional.</p>
+        </details>
+        <details>
+          <summary>What happens to what I type?</summary>
+          <p>Your description or photo is sent to an AI provider to build the list. As a guest, your history stays in your browser. The <a href="/privacy.html">Privacy &amp; AI Disclosure</a> has the details.</p>
+        </details>
+        <details>
+          <summary>Who makes Ask Danny?</summary>
+          <p>Matthew Sanchez, an economics student at the University of Southern California. It is a beta, so please <a href="mailto:matthewsanchez00024@gmail.com">report a wrong aisle</a> if you find one.</p>
+        </details>
+      </div>
+    </section>
+  </main>
+
+  <footer class="lp-foot">
+    <nav aria-label="Legal">
+      <a href="/terms.html">Terms of Use</a>
+      <a href="/privacy.html">Privacy &amp; AI disclosure</a>
+      <a href="/cookies.html">Cookies Policy</a>
+    </nav>
+    <p>Ask Danny is a free beta built by Matthew Sanchez, a student at the University of Southern California.
+      Questions, corrections or data requests: <a href="mailto:matthewsanchez00024@gmail.com">matthewsanchez00024@gmail.com</a></p>
+  </footer>
+</div>
 
 <!-- ── Access gate ── -->
-<div id="accessGate">
+<div id="accessGate" style="display:none">
   <div class="gate-card">
     <div class="gate-logo">AD</div>
     <div class="gate-title">Ask Danny</div>
@@ -1504,7 +1745,7 @@ button .ico:only-child { margin-right: 0; }
     <!-- Fields -->
     <div class="auth-fields">
       <div class="auth-field" id="fieldName" style="display:none">
-        <label>Full Name</label>
+        <label>Full name <span class="auth-optional">optional</span></label>
         <input type="text" id="authName" placeholder="Matthew Sanchez" autocomplete="name">
       </div>
       <div class="auth-field" id="fieldType" style="display:none">
@@ -1529,6 +1770,9 @@ button .ico:only-child { margin-right: 0; }
     <div class="auth-error" id="authError"></div>
     <button class="auth-submit-btn" id="authSubmitBtn" data-act="authSubmit">Sign In</button>
 
+    <p class="auth-legal">By continuing you agree to the <a href="/terms.html" target="_blank" rel="noopener">Terms of Use</a>
+      and the <a href="/privacy.html" target="_blank" rel="noopener">Privacy &amp; AI Disclosure</a>.</p>
+
     <button class="auth-guest-btn" data-act="authGuest">Continue as Guest</button>
     <div class="auth-guest-note">Guest history is saved locally on this device only.</div>
   </div>
@@ -1550,7 +1794,7 @@ button .ico:only-child { margin-right: 0; }
 
     <h3 class="ack-sub">What gets collected</h3>
     <ul class="ack-list ack-data">
-      <li><strong>What you type or photograph is sent to an AI company</strong> (Anthropic, Google, OpenAI or Groq) to build your list. Don't include personal or sensitive details.</li>
+      <li><strong>What you type, photograph or record is sent to an AI company</strong> (Anthropic, Google, OpenAI or Groq) to build your list. Don't include personal or sensitive details.</li>
       <li><strong>Location is optional</strong> and only used to match regional stock. Decline it and everything still works.</li>
       <li><strong>As a guest, nothing is stored on our servers</strong> — your history stays in this browser. Make an account and it's saved to Google Firebase instead.</li>
       <li><strong>Anonymous usage stats</strong> are only collected if you accept analytics in the cookie banner. Decline and nothing is sent to Google. Either way we don't sell data and don't run ads.</li>
@@ -1579,7 +1823,7 @@ button .ico:only-child { margin-right: 0; }
       <div class="logo-mark">AD</div>
       <div>
         <div class="logo-text">Ask Danny</div>
-        <div class="logo-sub">One-trip material list · Exact aisle numbers</div>
+        <div class="logo-sub">One-trip parts list · Aisle estimates</div>
       </div>
     </div>
     <div class="header-right">
@@ -1595,7 +1839,8 @@ button .ico:only-child { margin-right: 0; }
         <span class="loc-dot"></span>
         <span id="locLabel">Detect location</span>
       </button>
-      <div class="user-badge" id="userBadge" data-act="toggleUserDropdown" style="display:none">
+      <div class="user-badge" id="userBadge" data-act="toggleUserDropdown" data-act-keydown="toggleUserDropdown" data-key="Enter"
+           role="button" tabindex="0" aria-haspopup="menu" aria-label="Your account" style="display:none">
         <div class="user-avatar" id="userAvatar">?</div>
         <span id="userLabel">Guest</span>
         <div class="user-dropdown" id="userDropdown">
@@ -1635,7 +1880,7 @@ button .ico:only-child { margin-right: 0; }
                 style="--store-color:#F96302"
                 data-store="hd"
                 data-act="setStore">
-          <span class="store-name" style="color:#F96302">HOME DEPOT</span>
+          <span class="store-name" style="color:#8A3C05">HOME DEPOT</span>
           <span class="store-sub">Home improvement</span>
         </button>
         <button class="store-btn"
@@ -1649,7 +1894,7 @@ button .ico:only-child { margin-right: 0; }
                 style="--store-color:#E31837"
                 data-store="az"
                 data-act="setStore">
-          <span class="store-name" style="color:#E31837">AUTOZONE</span>
+          <span class="store-name" style="color:#B3122C">AUTOZONE</span>
           <span class="store-sub">Auto parts</span>
         </button>
       </div>
@@ -1714,24 +1959,25 @@ button .ico:only-child { margin-right: 0; }
 
     <!-- Describe -->
     <div class="card-header" style="border-top:1px solid var(--border)">
-      <div class="card-title">Describe the job — or show it</div>
+      <div class="card-title">Describe the job, or show it with a photo or video</div>
       <div class="header-tools">
-        <button class="mic-btn" id="photoBtn" data-act="openPhotoPicker" title="Add a photo of the problem"><svg class="ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
-        <button class="mic-btn" id="micBtn" data-act="toggleVoice" title="Tap to speak"><svg class="ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><path d="M12 19v4"/></svg></button>
+        <button class="mic-btn" id="photoBtn" data-act="openPhotoPicker" title="Add a photo or video of the problem" aria-label="Add a photo or video"><svg class="ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
+        <button class="mic-btn" id="micBtn" data-act="toggleVoice" title="Tap to speak" aria-label="Describe the job by voice"><svg class="ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><path d="M12 19v4"/></svg></button>
       </div>
     </div>
     <div class="card-body">
-      <!-- capture="environment" opens the rear camera directly on phones -->
-      <input type="file" id="photoInput" accept="image/*" capture="environment"
+      <!-- No capture attribute: phones then offer the camera (photo or video),
+           the photo library and files, instead of forcing the camera open. -->
+      <input type="file" id="photoInput" accept="image/*,video/*"
              style="display:none" data-act-change="onPhotoPicked">
 
       <div class="photo-strip" id="photoStrip" style="display:none">
         <img id="photoPreview" alt="Photo of the job">
         <div class="photo-meta">
           <div class="photo-name" id="photoName">Photo attached</div>
-          <div class="photo-hint">Danny will read this along with your description.</div>
+          <div class="photo-hint" id="photoHint">Danny will read this along with your description.</div>
         </div>
-        <button class="photo-remove" data-act="clearPhoto" title="Remove photo">&times;</button>
+        <button class="photo-remove" data-act="clearPhoto" title="Remove" aria-label="Remove the attached photo or video">&times;</button>
       </div>
 
 
@@ -1790,7 +2036,7 @@ button .ico:only-child { margin-right: 0; }
     <!-- Compare tabs (hidden in single-store mode) -->
     <div class="compare-tabs" id="compareTabs" style="display:none">
       <button class="compare-tab active" id="tabHD" data-act="switchCompareTab" data-arg="hd">
-        <span style="color:#F96302">HOME DEPOT</span>
+        <span style="color:#8A3C05">HOME DEPOT</span>
       </button>
       <button class="compare-tab" id="tabLW" data-act="switchCompareTab" data-arg="lw">
         <span style="color:#004990">LOWE'S</span>
@@ -1800,7 +2046,7 @@ button .ico:only-child { margin-right: 0; }
     <!-- Compare totals summary (hidden in single-store mode) -->
     <div class="compare-summary" id="compareSummary" style="display:none">
       <div>
-        <div class="compare-summary-store" style="color:#F96302">Home Depot</div>
+        <div class="compare-summary-store" style="color:#8A3C05">Home Depot</div>
         <div class="compare-summary-total" id="hdTotal">—</div>
       </div>
       <div>
@@ -1881,13 +2127,15 @@ button .ico:only-child { margin-right: 0; }
     </p>
     <nav class="footer-links">
       <a href="/terms.html">Terms of Use</a>
-      <span>·</span>
+      <span aria-hidden="true">·</span>
       <a href="/privacy.html">Privacy &amp; AI disclosure</a>
-      <span>·</span>
+      <span aria-hidden="true">·</span>
       <a href="/cookies.html">Cookies Policy</a>
-      <span>·</span>
+      <span aria-hidden="true">·</span>
       <a href="/login.html">Sign in</a>
-      <span>·</span>
+      <span aria-hidden="true">·</span>
+      <a href="/repairs/plumbing.html">Repair guides</a>
+      <span aria-hidden="true">·</span>
       <a href="mailto:matthewsanchez00024@gmail.com">Report a wrong aisle</a>
     </nav>
     <p class="footer-copy">Ask Danny · Beta · Built by Matthew Sanchez</p>
@@ -1972,9 +2220,9 @@ let voiceActive   = false;
 let recognition   = null;
 
 const STORES = {
-  hd: { name: 'Home Depot', color: '#F96302', aisles: '1–45' },
-  lw: { name: "Lowe's",     color: '#004990', aisles: '1–38' },
-  az: { name: 'AutoZone',   color: '#E31837', aisles: '1–12' },
+  hd: { name: 'Home Depot', color: '#F96302', text: '#8A3C05', aisles: '1–45' },
+  lw: { name: "Lowe's",     color: '#004990', text: '#004990', aisles: '1–38' },
+  az: { name: 'AutoZone',   color: '#E31837', text: '#B3122C', aisles: '1–12' },
 };
 
 // ── Quick Templates (per trade) ──
@@ -1987,10 +2235,61 @@ const TRADE_ICONS = {
 };
 
 // ── Init ──
+// ── Landing ──
+// The landing page is showing unless the pre-paint check at the top of <body>
+// added .skip-landing. Leaving it hands over to the same sign-in, guest and
+// acknowledgement flow as before.
+function landingActive() {
+  return !document.documentElement.classList.contains('skip-landing');
+}
+
+function leaveLanding() {
+  if (!landingActive()) return;
+  document.documentElement.classList.add('skip-landing');
+  window.scrollTo(0, 0);
+}
+
+function openSignIn() {
+  leaveLanding();
+  if (fbAuth && fbAuth.currentUser) showApp();
+  else document.getElementById('authScreen').style.display = 'flex';
+}
+
+// Links from the landing form and the repair guides arrive as ?job=&trade=.
+// The job is typed in and the trade picked; nothing is submitted, so the
+// visitor still reviews it, goes through the acknowledgement and presses the
+// button themselves. The parameters are then dropped from the address bar.
+const LINK_TRADES = ['plumbing', 'hvac', 'carpentry', 'auto', 'appliance'];
+
+// Only known trade names reach the selector below.
+function pickTrade(trade) {
+  if (!LINK_TRADES.includes(trade)) return;
+  const chip = document.querySelector(`.trade-chip[data-trade="${trade}"]`);
+  if (chip) setTrade(chip);
+  // The auto guides promise AutoZone; the store picker defaults to Home Depot.
+  if (trade === 'auto') {
+    const az = document.querySelector('.store-btn[data-store="az"]');
+    if (az) setStore(az);
+  }
+}
+
+function applyJobLink() {
+  const params = new URLSearchParams(location.search);
+  if (!params.has('job') && !params.has('trade')) return;
+  pickTrade(params.get('trade'));
+  const job = (params.get('job') || '').trim().slice(0, 800);
+  if (job) {
+    document.getElementById('prompt').value = job;
+    onInput();
+  }
+  history.replaceState(null, '', location.pathname + location.hash);
+}
+
 async function init() {
   if (!navigator.onLine) showOfflineBanner(true);
   window.addEventListener('online',  () => showOfflineBanner(false));
   window.addEventListener('offline', () => showOfflineBanner(true));
+  applyJobLink();
   await loadProducts();
 
   if (fbAuth) {
@@ -2003,13 +2302,13 @@ async function init() {
         loadPlan();
       } else {
         const gatePassed = sessionStorage.getItem(ACCESS_SESSION) === 'granted';
-        if (gatePassed) document.getElementById('authScreen').style.display = 'flex';
+        if (gatePassed && !landingActive()) document.getElementById('authScreen').style.display = 'flex';
       }
     });
   } else {
     // Firebase not configured — still show auth screen so user can continue as guest
     const gatePassed = sessionStorage.getItem(ACCESS_SESSION) === 'granted';
-    if (gatePassed) document.getElementById('authScreen').style.display = 'flex';
+    if (gatePassed && !landingActive()) document.getElementById('authScreen').style.display = 'flex';
   }
 }
 
@@ -2026,6 +2325,7 @@ function hasAcknowledgedAI() {
 
 // Every new user acknowledges that AI can make mistakes before using the app.
 function showApp() {
+  leaveLanding();  // already signed in: the landing page has nothing to offer
   document.getElementById('authScreen').style.display = 'none';
 
   if (!hasAcknowledgedAI()) {
@@ -2388,28 +2688,102 @@ function onKey(e) {
 // 1024px on the long edge before anything leaves the device.
 const PHOTO_MAX_EDGE = 1024;
 const PHOTO_QUALITY  = 0.82;
-let jobPhoto = null;   // { dataUrl, mediaType, bytes }
+let jobPhoto = null;   // { dataUrl, mediaType, base64, bytes, fromVideo }
+
+// A video is never uploaded. Four frames spread across it are drawn into one
+// 2x2 image on the device and sent like a photo: that stays well inside the
+// request size limit, and every model on the council can read an image, while
+// only some can read video.
+const VIDEO_FRAMES = 4;
 
 function onPhotoPicked(evt) {
   const file = evt.target.files?.[0];
-  if (!file) return;
-  if (!file.type.startsWith('image/')) {
-    showPhotoError('That file isn\'t an image.');
-    return;
+  evt.target.value = '';   // let the same file be re-picked later
+  if (file) attachMedia(file);
+}
+
+function attachMedia(file) {
+  const isVideo = file.type.startsWith('video/');
+  if (!isVideo && !file.type.startsWith('image/')) {
+    showPhotoError('That file isn\'t a photo or a video.');
+    return Promise.resolve(false);
   }
-  resizePhoto(file)
+  return (isVideo ? videoToFrames(file) : resizePhoto(file))
     .then(photo => {
-      jobPhoto = photo;
+      jobPhoto = { ...photo, fromVideo: isVideo };
+      const kb = Math.round(photo.bytes / 1024);
       document.getElementById('photoPreview').src = photo.dataUrl;
       setText(document.getElementById('photoName'),
-              `Photo attached · ${Math.round(photo.bytes / 1024)} KB`);
+              isVideo ? `Video attached · ${VIDEO_FRAMES} frames · ${kb} KB` : `Photo attached · ${kb} KB`);
+      setText(document.getElementById('photoHint'), isVideo
+        ? 'Danny will read four frames from your video along with your description.'
+        : 'Danny will read this along with your description.');
       document.getElementById('photoStrip').style.display = 'flex';
-      onInput();   // a photo alone is enough to enable the build button
-      if (typeof gtag === 'function') gtag('event', 'photo_attached');
+      onInput();   // a photo or video alone is enough to enable the build button
+      renderLandingMedia();
+      if (typeof gtag === 'function') gtag('event', isVideo ? 'video_attached' : 'photo_attached');
+      return true;
     })
-    .catch(() => showPhotoError('Could not read that image. Try another.'));
+    .catch(() => {
+      showPhotoError(isVideo
+        ? 'Could not read that video. Try a photo instead, or a video recorded on this device.'
+        : 'Could not read that image. Try another.');
+      return false;
+    });
+}
 
-  evt.target.value = '';   // let the same file be re-picked later
+function videoToFrames(file) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const video = document.createElement('video');
+    let settled = false;
+    const finish = (err, value) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      URL.revokeObjectURL(url);
+      err ? reject(err) : resolve(value);
+    };
+    const timer = setTimeout(() => finish(new Error('video timed out')), 20000);
+    const seek = t => new Promise((ok, no) => {
+      video.onseeked = () => ok();
+      video.onerror = () => no(new Error('seek failed'));
+      video.currentTime = t;
+    });
+
+    video.muted = true;
+    video.playsInline = true;
+    video.preload = 'auto';
+    video.onerror = () => finish(new Error('unreadable video'));
+    video.onloadedmetadata = async () => {
+      try {
+        // iOS only decodes frames after playback starts; a muted inline play
+        // is allowed without a gesture.
+        await video.play().catch(() => {});
+        video.pause();
+        const d = video.duration;
+        if (!isFinite(d) || d <= 0 || !video.videoWidth) throw new Error('no frames');
+
+        const cell = PHOTO_MAX_EDGE / 2;
+        const scale = Math.min(1, cell / Math.max(video.videoWidth, video.videoHeight));
+        const w = Math.round(video.videoWidth * scale);
+        const h = Math.round(video.videoHeight * scale);
+        const canvas = document.createElement('canvas');
+        canvas.width = w * 2; canvas.height = h * 2;
+        const ctx = canvas.getContext('2d');
+        for (let i = 0; i < VIDEO_FRAMES; i++) {
+          await seek(Math.min(d - 0.05, d * (i + 0.5) / VIDEO_FRAMES));
+          ctx.drawImage(video, (i % 2) * w, Math.floor(i / 2) * h, w, h);
+        }
+        const dataUrl = canvas.toDataURL('image/jpeg', PHOTO_QUALITY);
+        const base64 = dataUrl.split(',')[1] || '';
+        finish(null, { dataUrl, mediaType: 'image/jpeg', base64, bytes: Math.round(base64.length * 0.75) });
+      } catch (e) {
+        finish(e);
+      }
+    };
+    video.src = url;
+  });
 }
 
 function resizePhoto(file) {
@@ -2559,6 +2933,9 @@ async function submitUpdates(e) {
    the existing functions unchanged — each one just says what its handler
    needs, the element or the event or an argument. */
 const ACTIONS = {
+  // landing
+  openSignIn,
+  submitLanding: (el, e) => submitLanding(e),
   // gate
   checkCode,
   // auth
@@ -2617,13 +2994,43 @@ function clearPhoto() {
   document.getElementById('photoStrip').style.display = 'none';
   document.getElementById('photoPreview').removeAttribute('src');
   onInput();
+  renderLandingMedia();
 }
 
 function showPhotoError(msg) {
-  const errEl = document.getElementById('errorMsg');
+  // On the landing page the app's error box is hidden, so say it there.
+  const errEl = landingActive() ? document.getElementById('lpMediaMsg') : document.getElementById('errorMsg');
   setText(errEl, msg);
   errEl.classList.add('show');
-  setTimeout(() => errEl.classList.remove('show'), 3200);
+  setTimeout(() => errEl.classList.remove('show'), 4000);
+}
+
+// The landing input's attachment chip mirrors jobPhoto, which is the same
+// attachment the app sends, so nothing is lost when the landing page hands over.
+function renderLandingMedia() {
+  const chip = document.getElementById('lpMedia');
+  if (!chip) return;
+  const job = document.getElementById('lpJob');
+  if (!jobPhoto) {
+    chip.hidden = true;
+    job.required = true;
+    return;
+  }
+  document.getElementById('lpMediaThumb').src = jobPhoto.dataUrl;
+  setText(document.getElementById('lpMediaName'), jobPhoto.fromVideo ? 'Video attached' : 'Photo attached');
+  chip.hidden = false;
+  job.required = false;   // a photo or video alone is a valid job
+}
+
+function submitLanding(e) {
+  e.preventDefault();   // stay on the page so an attachment is not lost
+  const form = e.target.closest('form');
+  const job = form.elements.job.value.trim().slice(0, 800);
+  if (!job && !jobPhoto) { form.elements.job.focus(); return; }
+  pickTrade(form.elements.trade.value);
+  if (job) document.getElementById('prompt').value = job;
+  onInput();
+  openSignIn();
 }
 
 // ── Voice input ──
@@ -2925,7 +3332,7 @@ function renderResults({ notes, tools, items }, storeKey) {
     const aisle = document.createElement('div');
     aisle.className = 'aisle-badge';
     aisle.style.background = store.color + '18';
-    aisle.style.color      = store.color;
+    aisle.style.color      = store.text;
     setText(aisle, item.aisle);
     const price = document.createElement('div');
     price.className = 'price-est';
@@ -3199,6 +3606,10 @@ async function submitJob() {
   // Photo with no description: tell the model to work from the image.
   if (!prompt && jobPhoto) {
     prompt = 'Identify the problem shown in the photo and list every material needed to fix it.';
+  }
+  // Without this the model reads the 2x2 frame grid as four separate problems.
+  if (jobPhoto && jobPhoto.fromVideo) {
+    prompt += '\n\n(The image is four frames from a short video of the job, in order: top left, top right, bottom left, bottom right.)';
   }
 
   // Offline: serve cached list
@@ -3602,20 +4013,21 @@ const REQUIRE_ACCESS_CODE = false;
 const ACCESS_CODE    = 'TRADE2026';
 const ACCESS_SESSION = 'diagnostech_access';
 
+// The gate markup starts hidden, so its "invite-only" text is not the first
+// thing a crawler or a visitor without JavaScript sees. It is only shown when a
+// code is actually required.
 (function gateInit() {
   const gate = document.getElementById('accessGate');
   if (!REQUIRE_ACCESS_CODE) {
-    gate.style.display = 'none';
     sessionStorage.setItem(ACCESS_SESSION, 'granted');  // let init() proceed
     return;
   }
-  if (sessionStorage.getItem(ACCESS_SESSION) === 'granted') {
-    gate.style.display = 'none';
-    // authScreen stays hidden until Firebase resolves auth state in init()
-    // or shows immediately if Firebase isn't configured
-  } else {
+  if (sessionStorage.getItem(ACCESS_SESSION) !== 'granted') {
+    gate.style.display = 'flex';
     document.body.style.overflow = 'hidden';
   }
+  // Once granted, authScreen stays hidden until Firebase resolves auth state
+  // in init(), or shows immediately if Firebase isn't configured.
 })();
 
 function checkCode() {

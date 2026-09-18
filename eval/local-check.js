@@ -505,11 +505,78 @@ const TINY_JPEG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z
     delete process.env.ADMIN_TOKEN;
   }
 
+  // Addresses at rest. With LIST_KEY set, a stolen copy of the store, or an
+  // export taken with a stolen admin token on a machine without the key, must
+  // not yield readable addresses — while unsubscribe and sending still work.
+  {
+    const stores = new Map();
+    const memFor = (name) => {
+      if (!stores.has(name)) stores.set(name, new Map());
+      return stores.get(name);
+    };
+    const fakeBlobs = { getStore: (opts) => {
+      const mem = memFor(typeof opts === 'string' ? opts : opts.name);
+      return {
+        get: async (k) => mem.has(k) ? JSON.parse(mem.get(k)) : null,
+        setJSON: async (k, v) => { mem.set(k, JSON.stringify(v)); },
+        delete: async (k) => { mem.delete(k); },
+        list: async () => ({ blobs: [...mem.keys()].map(key => ({ key })) }),
+      };
+    } };
+    const mem = memFor('subscribers');
+    const req = (name) => name === '@netlify/blobs' ? fakeBlobs : depRequire(name);
+    const loadWithBlobs = (file) => {
+      const src = fs.readFileSync(path.join(SRC, file), 'utf8');
+      const m = { exports: {} };
+      new Function('module','exports','process','fetch','require','__dirname',src)(
+        m, m.exports, process, async () => { throw new Error('no network'); }, req, SRC);
+      return m.exports;
+    };
+
+    process.env.LIST_KEY = Buffer.alloc(32, 7).toString('base64');
+    process.env.ADMIN_TOKEN = 'test-admin-token-value';
+    const { handler } = loadWithBlobs('updates.js');
+    const res = await handler({ httpMethod: 'POST', path: '/api/subscribe',
+      headers: { origin: 'https://ask-danny-ai.com', 'x-forwarded-for': '10.2.2.2' },
+      body: JSON.stringify({ email: 'ada@example.com', consent: true, source: 'test' }) });
+    ok('list: a consented address is accepted with encryption on', res.statusCode === 200);
+
+    const raw = [...mem.values()][0] || '';
+    ok('list: the stored record holds no readable address', !raw.includes('ada@example.com'), raw.slice(0, 80));
+    ok('list: the stored record is encrypted', JSON.parse(raw || '{}').emailEnc !== undefined);
+
+    const exported = await handler({ httpMethod: 'GET', path: '/api/subscribers',
+      headers: { 'x-admin-token': 'test-admin-token-value' } });
+    ok('list: the admin export decrypts the address', /ada@example\.com/.test(exported.body));
+
+    const unsub = await handler({ httpMethod: 'GET', path: '/api/unsubscribe',
+      queryStringParameters: { t: JSON.parse(raw).unsubToken }, headers: {} });
+    ok('list: unsubscribe still works on an encrypted record',
+       unsub.statusCode === 200 && JSON.parse([...mem.values()][0]).status === 'unsubscribed');
+
+    // Without the key the address cannot be recovered, by anyone.
+    delete process.env.LIST_KEY;
+    const blind = await handler({ httpMethod: 'GET', path: '/api/subscribers',
+      headers: { 'x-admin-token': 'test-admin-token-value' } });
+    ok('list: export without the key exposes no address', !/ada@example\.com/.test(blind.body));
+    delete process.env.ADMIN_TOKEN;
+  }
+
   {
     // Broadcast must be impossible to fire by accident.
     const mem = new Map();
     mem.set('k1', JSON.stringify({ email: 'sam@example.com', status: 'subscribed', unsubToken: 'tok1' }));
     mem.set('k2', JSON.stringify({ email: 'gone@example.com', status: 'unsubscribed', unsubToken: 'tok2' }));
+    // An encrypted record, the shape updates.js writes once LIST_KEY is set.
+    process.env.LIST_KEY = Buffer.alloc(32, 7).toString('base64');
+    {
+      const crypto = require('crypto');
+      const iv = crypto.randomBytes(12);
+      const c = crypto.createCipheriv('aes-256-gcm', Buffer.alloc(32, 7), iv);
+      const enc = Buffer.concat([c.update('ada@example.com', 'utf8'), c.final()]);
+      mem.set('k3', JSON.stringify({ emailEnc: Buffer.concat([iv, c.getAuthTag(), enc]).toString('base64'),
+        status: 'subscribed', unsubToken: 'tok3' }));
+    }
     const fakeBlobs = { getStore: () => ({
       get: async (k) => mem.has(k) ? JSON.parse(mem.get(k)) : null,
       setJSON: async () => {},
@@ -538,9 +605,17 @@ const TINY_JPEG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z
     const dry = await handler(post({ subject: 'Hello', body: 'Update.' }, 'test-admin-token-value'));
     const dd = JSON.parse(dry.body);
     ok('broadcast: defaults to a dry run when dryRun is omitted', dd.dryRun === true && sends === 0);
-    ok('broadcast: counts only active subscribers', dd.wouldSend === 1);
+    ok('broadcast: counts only active subscribers', dd.wouldSend === 2, JSON.stringify(dd.sample));
+    ok('broadcast: reads encrypted addresses', (dd.sample || []).includes('ada@example.com'), JSON.stringify(dd.sample));
+
+    // Without the key those subscribers are skipped, never mailed blind.
+    delete process.env.LIST_KEY;
+    const noKey = JSON.parse((await handler(post({ subject: 'Hello', body: 'Update.' }, 'test-admin-token-value'))).body);
+    ok('broadcast: skips encrypted records when the key is missing', noKey.wouldSend === 1, JSON.stringify(noKey.sample));
+    process.env.LIST_KEY = Buffer.alloc(32, 7).toString('base64');
 
     // A real send still needs a provider, and says so rather than silently doing nothing.
+    delete process.env.LIST_KEY;
     delete process.env.RESEND_API_KEY;
     const unconf = await handler(post({ subject: 'Hello', body: 'Update.', dryRun: false }, 'test-admin-token-value'));
     ok('broadcast: a real send without a provider fails loudly',
@@ -633,6 +708,64 @@ const TINY_JPEG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z
     ok('blobs: diag round trip reports ok', steps.write === 'ok' && steps.read === 'ok', JSON.stringify(steps));
     ok('blobs: diag leaves no probe record in the subscriber list', mem.size === 0, [...mem.keys()].join(','));
     delete process.env.ADMIN_TOKEN;
+  }
+
+  // Public pages. The homepage used to open on a sign-in screen and ship with a
+  // script ahead of <!DOCTYPE>, which put every browser in quirks mode. The
+  // repair guides are generated, so their links, metadata and app hand-off are
+  // checked here rather than by eye.
+  {
+    const ROOT = path.join(__dirname, '..');
+    const index = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+    ok('site: index.html starts with <!DOCTYPE html> (no quirks mode)', index.startsWith('<!DOCTYPE html>'));
+    ok('site: the homepage has exactly one h1', (index.match(/<h1\b/g) || []).length === 1);
+    ok('site: the guide-links marker is present once for the build',
+       index.split('<!-- GUIDE_LINKS: filled in by scripts/build.js from content/guides.js -->').length === 2);
+    ok('site: the access gate is hidden until a code is required', /<div id="accessGate" style="display:none">/.test(index));
+    // Visible markup and metadata only; the AI prompt legitimately says to use
+    // the exact aisle from verified inventory.
+    const visible = index.replace(/<script(?![^>]*ld\+json)[\s\S]*?<\/script>/g, '');
+    ok('site: the homepage makes no "exact aisle" claim', !/exact aisle|exact, one-trip/i.test(visible));
+    ok('site: the photo input accepts videos', /id="photoInput" accept="image\/\*,video\/\*"/.test(index));
+
+    const pages = require(path.join(ROOT, 'scripts', 'pages.js'));
+    const rendered = pages.render();
+    const htmlPages = rendered.filter(p => p.file.endsWith('.html'));
+    const evalJobs = JSON.parse(fs.readFileSync(path.join(__dirname, 'jobs.json'), 'utf8'));
+    const jobList = Array.isArray(evalJobs) ? evalJobs : evalJobs.jobs;
+    const published = new Set(['/', '/terms.html', '/privacy.html', '/cookies.html', '/login.html',
+      ...rendered.map(p => p.url || '/' + p.file)]);
+    const sitemap = pages.sitemap();
+    const problems = [];
+
+    for (const { file, html, url: pageUrl } of htmlPages) {
+      const url = pageUrl || '/' + file;
+      const title = (html.match(/<title>([^<]*)<\/title>/) || [])[1] || '';
+      const desc = (html.match(/<meta name="description" content="([^"]*)"/) || [])[1] || '';
+      if ((html.match(/<h1\b/g) || []).length !== 1) problems.push(`${url}: needs exactly one h1`);
+      if (!title || title.length > 70) problems.push(`${url}: title length ${title.length}`);
+      if (!desc || desc.length > 165) problems.push(`${url}: description length ${desc.length}`);
+      if (!html.includes(`<link rel="canonical" href="https://ask-danny-ai.com${url}">`)) problems.push(`${url}: canonical`);
+      if (/<script(?![^>]*application\/ld\+json)/.test(html)) problems.push(`${url}: executable script (CSP has no hash for it)`);
+      if (/\bexact\b|guarantee/i.test(html)) problems.push(`${url}: unsupported claim wording`);
+      if (/\p{Extended_Pictographic}/u.test(html)) problems.push(`${url}: emoji`);
+      if (!sitemap.includes(`https://ask-danny-ai.com${url}<`)) problems.push(`${url}: missing from sitemap`);
+      for (const [, href] of html.matchAll(/href="(\/[^"#?]*)/g)) {
+        if (!href.startsWith('/?') && !published.has(href)) problems.push(`${url}: broken link ${href}`);
+      }
+    }
+    for (const j of pages.JOBS) {
+      const match = jobList.find(e => e.text === j.appJob);
+      if (!match) problems.push(`${j.slug}: appJob is not a job in eval/jobs.json`);
+      else if (match.trade !== j.trade) problems.push(`${j.slug}: trade ${j.trade} but eval job is ${match.trade}`);
+    }
+    ok('site: every repair guide passes its checks', problems.length === 0, problems.slice(0, 6).join('; '));
+    ok('site: guide app links only carry job and trade',
+       rendered.every(p => [...p.html.matchAll(/href="\/\?([^"]*)"/g)]
+         .every(([, q]) => [...new URLSearchParams(q.replace(/&amp;/g, '&')).keys()].every(k => k === 'job' || k === 'trade'))));
+    ok('site: landing links cover every trade and job',
+       pages.TRADES.every(t => pages.landingLinks().includes(`"/repairs/${t.key}"`)) &&
+       pages.JOBS.every(j => pages.landingLinks().includes(`"/repairs/${j.slug}"`)));
   }
 
   console.log('─────────────────────────────────────────────');
