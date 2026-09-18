@@ -99,9 +99,12 @@ async function checkRateLimit(key, tier) {
 
 function sanitizeInput(text) {
   if (typeof text !== 'string') return '';
-  return text
-    .slice(0, 1600)
-    .replace(/<[^>]*>/g, '')
+  // One pass of a tag-stripping regex can be beaten by nesting: "<<b>script>"
+  // becomes "<script>". So strip until nothing changes. This is prompt
+  // hygiene, not the XSS defence; the page renders model output as text.
+  let out = text.slice(0, 1600), prev;
+  do { prev = out; out = out.replace(/<[^>]*>/g, ''); } while (out !== prev);
+  return out
     .replace(/\bignore\s+(all\s+)?previous\s+instructions?\b/gi, '[removed]')
     .replace(/\bsystem\s*prompt\b/gi, '[removed]')
     .replace(/\bdisregard\s+\w+/gi, '[removed]')

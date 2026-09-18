@@ -768,6 +768,21 @@ const TINY_JPEG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z
        pages.JOBS.every(j => pages.landingLinks().includes(`"/repairs/${j.slug}"`)));
   }
 
+  // Nested tags. A single pass of the tag-stripping regex turned
+  // "<<b>script>" into "<script>"; CodeQL flagged it. Both endpoints must
+  // strip until nothing is left.
+  {
+    const nested = '<<b>script>alert(1)<</b>/script> leaking p-trap under the sink';
+    for (const file of ['ai-council.js', 'ai-proxy.js']) {
+      const m = makeFetch({});
+      const { handler } = load(file, m.fetch);
+      await handler(evt({ tier: 'free', prompt: nested, store: 'hd', trade: 'plumbing' }));
+      const sent = m.calls.map(c => JSON.stringify(c.body)).join(' ');
+      ok(`sanitize: ${file} strips nested tags before the model sees them`,
+         m.calls.length > 0 && !/<\/?script/i.test(sent), sent.match(/.{0,20}script.{0,20}/i)?.[0]);
+    }
+  }
+
   console.log('─────────────────────────────────────────────');
   console.log(`  ${pass} passed, ${fail} failed`);
   if (failures.length) {

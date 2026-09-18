@@ -71,6 +71,12 @@ jobs:
         with:
           languages: javascript
           queries: security-extended
+          # eval/ is local test tooling that never deploys: it reads job files,
+          # calls the API and writes CSVs by design. dist/ is build output.
+          config: |
+            paths-ignore:
+              - eval
+              - dist
       - uses: github/codeql-action/analyze@v3
 
   checks:
