@@ -1,12 +1,12 @@
 # Dependabot opens pull requests when a dependency or workflow action has a
-# newer version. Security updates are what matter here: @netlify/blobs handles
+# newer version, checked monthly: each open PR used to cost a Netlify preview build. Security updates are what matter here: @netlify/blobs handles
 # the subscriber list, and a compromised GitHub action could read repo secrets.
 version: 2
 updates:
   - package-ecosystem: npm
     directory: /
     schedule:
-      interval: weekly
+      interval: monthly
     open-pull-requests-limit: 5
     groups:
       all-dependencies:
@@ -15,4 +15,4 @@ updates:
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: weekly
+      interval: monthly
