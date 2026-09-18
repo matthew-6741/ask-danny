@@ -768,6 +768,20 @@ const TINY_JPEG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z
        pages.JOBS.every(j => pages.landingLinks().includes(`"/repairs/${j.slug}"`)));
   }
 
+  // Build-skip rule. Each production deploy costs 15 credits, so docs-only
+  // pushes skip the build. The guards matter more than the diff: without them
+  // a first build, or a deliberate redeploy of the same commit after an
+  // environment variable change, compares nothing and is skipped.
+  {
+    const toml = fs.readFileSync(path.join(__dirname, '..', 'netlify.toml'), 'utf8');
+    const rule = (toml.match(/^  ignore = '([^'\n]*)'$/m) || [])[1] || '';
+    ok('build: the skip rule is a one-line literal string', !!rule);
+    ok('build: always builds when there is no previous build', rule.startsWith('[ -n "$CACHED_COMMIT_REF" ] && '));
+    ok('build: always builds a deliberate redeploy of the same commit', rule.includes('[ "$CACHED_COMMIT_REF" != "$COMMIT_REF" ]'));
+    ok('build: only docs, .github and eval are skippable',
+       (rule.match(/:\(exclude\)[^"]+/g) || []).join(' ') === ':(exclude)*.md :(exclude).github :(exclude)eval');
+  }
+
   // Nested tags. A single pass of the tag-stripping regex turned
   // "<<b>script>" into "<script>"; CodeQL flagged it. Both endpoints must
   // strip until nothing is left.

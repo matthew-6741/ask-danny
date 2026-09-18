@@ -138,7 +138,7 @@ it clears 4.5:1. Every text colour on the site passes WCAG AA.
 
 The site has been linked to GitHub (`matthew-6741/ask-danny`, branch `main`)
 since 2026-09-16. **Pushing to `main` deploys to production.** Netlify runs
-`scripts/build.js`, which runs `eval/local-check.js` (112 checks) and fails the
+`scripts/build.js`, which runs `eval/local-check.js` (118 checks) and fails the
 build if any fail. It then copies an explicit allowlist of 11 site files into
 `dist/`, which is what gets published. Functions deploy from
 `netlify/functions/`.
@@ -163,7 +163,13 @@ node scripts/build.js                    # checks, then dist/
 netlify deploy --dir dist --functions netlify/functions   # prints a draft URL
 ```
 
-Then push to `main` to ship it. `netlify deploy --prod` fails with
+Then push to `main` to ship it. **Pushes that only touch docs (`*.md`), `.github/` or `eval/` do not build.**
+Every production deploy costs 15 of the free plan's 300 monthly credits, so the
+`ignore` rule in `netlify.toml` skips those. To redeploy after changing an
+environment variable, use **Trigger deploy** in the Netlify UI: it rebuilds the
+same commit, which the rule always allows. An empty commit is skipped.
+
+`netlify deploy --prod` fails with
 `JSONHTTPError: Forbidden` on this account (the upload succeeds and only the
 publish call is refused). If a CLI draft ever has to go live without a push,
 promote it, knowing the next push to `main` replaces it:

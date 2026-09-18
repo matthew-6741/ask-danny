@@ -11,6 +11,13 @@
   command = "node scripts/build.js"
   publish = "dist"
   functions = "netlify/functions"
+  # Every production deploy costs 15 credits on the free plan, whatever changed.
+  # Skip the build when a push touches only docs (*.md), GitHub settings
+  # (.github) or test tooling (eval), none of which the live site uses. Exit 0
+  # means skip. It always builds when there is no previous build to compare
+  # with, when the same commit is redeployed on purpose (use "Trigger deploy"
+  # after changing an environment variable), or when the diff fails.
+  ignore = '[ -n "$CACHED_COMMIT_REF" ] && [ "$CACHED_COMMIT_REF" != "$COMMIT_REF" ] && git diff --quiet "$CACHED_COMMIT_REF" "$COMMIT_REF" -- . ":(exclude)*.md" ":(exclude).github" ":(exclude)eval"'
 
 [[headers]]
   for = "/*"

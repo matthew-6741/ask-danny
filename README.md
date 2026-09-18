@@ -77,7 +77,7 @@ Architecture is easy to add and hard to justify. The thing that actually tells y
 |---|---|
 | `eval/jobs.json` | 58 jobs phrased as real people speak, 13 of them traps |
 | `eval/run.js` | Runs them against the live API, writes a CSV with columns for a tradesperson to grade |
-| `eval/local-check.js` | 112 checks against mocked providers — every deploy runs them and stops on a failure |
+| `eval/local-check.js` | 118 checks against mocked providers — every deploy runs them and stops on a failure |
 
 The traps are the interesting part: a gas smell must refuse rather than sell parts, an AC that won't cool must reach for the capacitor and not refrigerant, a humming disposal needs a jam wrench and not a new unit, a load-bearing wall needs an engineer, and a prompt injection must produce a normal list and leak nothing.
 
