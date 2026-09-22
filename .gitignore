@@ -4,3 +4,6 @@ node_modules/
 eval/results-*.csv
 eval/results-*.json
 dist/
+# Local provider keys for eval/run.js --local. Never commit.
+.env.local
+.env
