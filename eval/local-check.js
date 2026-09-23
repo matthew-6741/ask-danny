@@ -768,6 +768,69 @@ const TINY_JPEG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z
        pages.JOBS.every(j => pages.landingLinks().includes(`"/repairs/${j.slug}"`)));
   }
 
+  // Review fixes, 2026-09-23.
+  {
+    // A safety refusal must survive the judge-less merge. One drafter refuses
+    // a gas smell, the other lists sealant, and the judge fails. Before the
+    // fix the merge kept the sealant and the first non-empty notes.
+    const STOP = 'Smelling gas near the water heater is an immediate hazard. Leave the house now and call your gas utility from outside.';
+    const SELL = JSON.stringify({ notes: 'Tighten the fitting.', tools: [],
+      materials: [{ name: 'Pipe Thread Sealant', spec: 'gas-rated', qty: '1', aisle: 'Aisle 21', price: '~$6', confidence: 'high' }] });
+    let drafted = 0;
+    const plan = {
+      gemini: () => (++drafted <= 1 ? geminiBody(STOP) : errBody('judge down', 500)),
+      groq:   () => (++drafted <= 2 ? groqBody(SELL)  : errBody('judge down', 500)),
+    };
+    const m = makeFetch(plan);
+    const { handler } = load('ai-council.js', m.fetch);
+    const res = await handler(evt({ tier: 'free', prompt: 'I smell gas near the water heater', store: 'hd', trade: 'plumbing' }));
+    const d = JSON.parse(res.body);
+    ok('review: a safety refusal wins when the judge fails',
+       res.statusCode === 200 && d.judged !== true && (d.items || []).length === 0 && /gas/i.test(d.notes || ''),
+       `status ${res.statusCode} judged=${d.judged} items=${(d.items || []).length} notes=${String(d.notes).slice(0, 60)}`);
+  }
+  {
+    // Home Depot aisles must not be labelled verified on another store's list.
+    const m = makeFetch({});
+    const { handler } = load('ai-council.js', m.fetch);
+    const lw = JSON.parse((await handler(evt({ tier: 'free', prompt: 'refrigerator not cooling dusty coils', store: 'lw', trade: 'appliance' }))).body);
+    ok("review: no Home Depot aisle is marked verified on a Lowe's list",
+       (lw.items || []).length > 0 && (lw.items || []).every(i => !i.aisleVerified),
+       JSON.stringify((lw.items || []).map(i => [i.name, i.aisleVerified])));
+    const sent = m.calls.map(c => JSON.stringify(c.body)).join(' ');
+    ok("review: a Lowe's prompt carries no Home Depot inventory", !/VERIFIED STORE INVENTORY/.test(sent));
+  }
+  {
+    const src = fs.readFileSync(path.join(SRC, 'ai-council.js'), 'utf8');
+    ok('review: paidEnabled is defined wherever it is called',
+       !/paidEnabled\(\)/.test(src) || /function paidEnabled\(/.test(src));
+    ok('review: Groq gets no text-only model for photos',
+       !/GROQ_VISION_MODELS = \[[^\]]*llama-3\.1-8b-instant/.test(src));
+    const proxy = fs.readFileSync(path.join(SRC, 'ai-proxy.js'), 'utf8');
+    ok('review: the proxy never takes its tier from the request', !/body\.tier\s*===\s*'pro'/.test(proxy));
+  }
+  {
+    // Unsubscribe must report a storage failure, not a false success.
+    const fakeBlobs = { getStore: () => ({
+      list: async () => { throw new Error('blobs down'); },
+      get: async () => null, setJSON: async () => {},
+    }) };
+    const { handler } = load('updates.js', async () => { throw new Error('no network'); }, { '@netlify/blobs': fakeBlobs });
+    const r = await handler({ httpMethod: 'GET', path: '/api/unsubscribe', queryStringParameters: { t: 'tok' }, headers: {} });
+    ok('review: unsubscribe does not claim success when storage fails',
+       r.statusCode === 503 && !/You are unsubscribed/.test(r.body), `status ${r.statusCode}`);
+  }
+  {
+    // Front end: no SVG markup assigned as text, the limit error is flagged
+    // rather than pattern-matched, and compare keeps safety notices.
+    const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+    ok('review: no SVG markup is set through textContent', !/textContent\s*=\s*[`'"]<svg/.test(html));
+    ok('review: the council limit error is flagged, not matched by wording',
+       /e\.rateLimited = true/.test(html) && /councilErr\.rateLimited/.test(html) && !/\/limit\|quota\/i\.test\(councilErr/.test(html));
+    ok('review: compare mode keeps a safety notice instead of erroring',
+       /const notice = \[compareData\.hd, compareData\.lw\]\.find/.test(html));
+  }
+
   // Build-skip rule. Each production deploy costs 15 credits, so docs-only
   // pushes skip the build. The guards matter more than the diff: without them
   // a first build, or a deliberate redeploy of the same commit after an

@@ -221,6 +221,13 @@ exports.handler = async (event) => {
         '<p>We could not reach the list just now. Try the link again shortly, or reply to any update and we will remove you by hand.</p>'));
     }
 
+    // A storage error must not be reported as a successful unsubscribe: the
+    // record would stay subscribed and the next update would mail someone we
+    // told was removed. Only a clean lookup that finds nothing gets the
+    // generic success page.
+    const failed = () => html(503, page('Unsubscribe', 'Something went wrong',
+      '<p>We could not update the list just now, so you have not been removed yet. Try the link again in a few minutes, or reply to any update and we will remove you by hand.</p>'));
+
     let hit = null;
     try {
       const { blobs } = await s.list();
@@ -228,12 +235,12 @@ exports.handler = async (event) => {
         const rec = await s.get(b.key, { type: 'json' });
         if (rec && rec.unsubToken === t) { hit = { key: b.key, rec }; break; }
       }
-    } catch { /* fall through to the generic answer */ }
+    } catch { return failed(); }
 
     if (hit) {
       hit.rec.status = 'unsubscribed';
       hit.rec.unsubscribedAt = new Date().toISOString();
-      try { await s.setJSON(hit.key, hit.rec); } catch { /* best effort */ }
+      try { await s.setJSON(hit.key, hit.rec); } catch { return failed(); }
     }
 
     // Same page whether or not the token matched. Confirming that a token is

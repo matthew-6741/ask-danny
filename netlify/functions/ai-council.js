@@ -52,9 +52,10 @@ const GROQ_TEXT_MODELS = [
   'openai/gpt-oss-120b',
   'openai/gpt-oss-20b',
 ];
+// No text-model fallback: a text model handed a photo either errors or answers
+// confidently about an image it never saw. Matches ai-proxy.js.
 const GROQ_VISION_MODELS = [
   'meta-llama/llama-4-scout-17b-16e-instruct',
-  'llama-3.1-8b-instant',
 ];
 
 // Transient capacity errors are retryable too — a provider saying "high demand"
@@ -118,6 +119,13 @@ async function resolveTier(body, event) {
 // Verify the Firebase ID token, then read users/{uid}.plan from Firestore and
 // return true only when it equals 'pro'. Until then Pro is unreachable, which
 // is the safe default.
+// The switch for paid providers. Restored: an earlier commit deleted this while
+// three call sites still used it. Free requests never reached it (allowPaid is
+// false, so the && short-circuits), but any Pro request would have thrown.
+function paidEnabled() {
+  return String(process.env.ENABLE_PAID_COUNCIL || '').toLowerCase() === 'true';
+}
+
 async function verifyProToken(/* idToken */) {
   return false;
 }
@@ -1046,6 +1054,13 @@ function conflicts(aTokens, bTokens) {
 // identifies a product is its head noun: brush, blade, valve, filter. Two names
 // sharing a head noun and some qualifier are the same thing; two names with
 // different head nouns are not, however many words they share.
+// A rule-0 refusal: no materials, and notes that send the person away from a
+// hazard. "None." or a permit reminder with an empty list is not a stop.
+const HAZARD_STOP = /\bgas\b|carbon monoxide|\bco\b detector|evacuat|leave (the|your) (area|house|home|building|room)|fire department|911|emergency|spark|burning smell|live (wire|electric)/i;
+function isSafetyStop(parsed) {
+  return !!parsed && !(parsed.items || []).length && HAZARD_STOP.test(String(parsed.notes || ''));
+}
+
 function similarity(a, b) {
   if (!a.length || !b.length) return 0;
   // Conflicting attributes (copper vs pvc, gas vs electric, front vs rear) mean
@@ -1244,7 +1259,13 @@ exports.handler = async (event) => {
   const maxTokens = Math.min(Number(body.max_tokens) || 1600, plan.maxTokens);
 
   // Retrieval happens here, from our own database — after `prompt` exists.
-  const serverInventory = lookupInventory(body.trade, prompt);
+  // products.json is Home Depot data (meta.store). Offering its aisles as
+  // "verified" on a Lowe's or AutoZone list sent people to the wrong aisle while
+  // telling them it was checked. Other stores get no inventory, so every aisle
+  // on their lists is honestly marked unverified.
+  const inventoryStore = (PRODUCTS.meta && PRODUCTS.meta.store) || 'Home Depot';
+  const storeName = (STORES[body.store] || STORES.hd).name;
+  const serverInventory = storeName === inventoryStore ? lookupInventory(body.trade, prompt) : [];
   let system = buildSystemPrompt({
     storeKey:      body.store,
     trade:         body.trade,
@@ -1319,7 +1340,9 @@ exports.handler = async (event) => {
       drafts.push({ id: members[i].id, provider: name, raw: r.value, parsed: draft });
       status.push({ provider: name, ok: true, stage: 'opinion', itemCount: parseResponse(r.value).items.length });
     } else {
-      recordFailure(members[i].id);
+      // A photo job failing says little about the provider's text path, and
+      // opening the circuit on it would drop that provider from text jobs too.
+      if (!image) recordFailure(members[i].id);
       const why = r.status === 'rejected'
         ? String(r.reason?.message || r.reason).slice(0, 160)
         : 'returned no parseable materials';
@@ -1376,7 +1399,15 @@ exports.handler = async (event) => {
   // that saves the second trip. Union them instead, deduped by the same
   // similarity used elsewhere, and mark how many drafts backed each item so the
   // UI can still show confidence.
-  if (!judged && drafts.length > 1) {
+  // A draft that refused on safety grounds (rule 0: gas, CO, sparking wiring)
+  // wins outright. Merging would otherwise hand the user another draft's
+  // sealant and tape for a live hazard, because the refusal has no items to
+  // vote with. The judge is told the same thing; this covers the path where
+  // the judge was skipped or failed.
+  const stop = !judged && drafts.find(d => isSafetyStop(d.parsed));
+  if (stop) {
+    finalParsed = { notes: stop.parsed.notes, tools: [], items: [] };
+  } else if (!judged && drafts.length > 1) {
     const merged = [];
     drafts.forEach(d => {
       d.parsed.items.forEach(item => {

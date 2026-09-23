@@ -3056,7 +3056,7 @@ function toggleVoice() {
   recognition.onstart = () => {
     voiceActive = true;
     btn.classList.add('recording');
-    btn.textContent = '<svg class="ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>️';
+    setIcon(btn, 'stop');
   };
 
   recognition.onresult = (e) => {
@@ -3073,7 +3073,7 @@ function toggleVoice() {
   recognition.onend = () => {
     voiceActive = false;
     btn.classList.remove('recording');
-    btn.textContent = '<svg class="ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><path d="M12 19v4"/></svg>';
+    setIcon(btn, 'mic');
   };
 
   recognition.start();
@@ -3370,6 +3370,7 @@ function startCompare() {
 }
 
 async function runCompare(prompt) {
+  lastCouncil = null;   // compare uses the single-model path; no council metadata
   document.getElementById('inputCard').style.display   = 'none';
   document.getElementById('resultsCard').classList.remove('show');
   document.getElementById('errorMsg').classList.remove('show');
@@ -3389,8 +3390,21 @@ async function runCompare(prompt) {
     compareData.hd = parseResponse(hdRaw);
     compareData.lw = parseResponse(lwRaw);
 
+    // Same rule as submitJob: an empty list with a safety notice is the right
+    // answer to "I smell gas". Show the notice on its own, without the store
+    // comparison, rather than telling the user to rephrase a hazard report.
     if (compareData.hd.items.length === 0 && compareData.lw.items.length === 0) {
-      throw new Error('No materials returned. Try rephrasing your description.');
+      const notice = [compareData.hd, compareData.lw].find(p => (p.notes || '').trim().length > 20);
+      if (!notice) throw new Error('No materials returned. Try rephrasing your description.');
+      stopSteps();
+      document.getElementById('loadingCard').classList.remove('show');
+      setText(document.getElementById('loadingLabel'), 'Building your complete list…');
+      compareMode = false;
+      document.getElementById('compareTabs').style.display    = 'none';
+      document.getElementById('compareSummary').style.display = 'none';
+      renderResults(notice, 'hd');
+      document.getElementById('resultsCard').classList.add('show');
+      return;
     }
 
     stopSteps();
@@ -3560,7 +3574,11 @@ async function fetchConsensus(prompt, storeKey) {
   if (response.status === 429) {
     consensusLeft = 0;
     applyPlanUI();
-    throw new Error(data.error || 'Cross-check limit reached — try again later.');
+    // Flagged, not pattern-matched: the server reworded this message once and
+    // the old /limit|quota/ check silently stopped recognising it.
+    const e = new Error(data.error || 'Cross-check limit reached — try again later.');
+    e.rateLimited = true;
+    throw e;
   }
   if (!response.ok || data.error) {
     const msg = typeof data.error === 'string' ? data.error : data.error?.message;
@@ -3646,7 +3664,10 @@ async function submitJob() {
     try {
       parsed = await fetchConsensus(fullPrompt, currentStore);
     } catch (councilErr) {
-      if (/limit|quota/i.test(councilErr.message)) throw councilErr;
+      if (councilErr.rateLimited) throw councilErr;
+      // The single-model answer must not carry the last council's "reviewed by"
+      // line and verified-aisle badges.
+      lastCouncil = null;
       parsed = parseResponse(await fetchFromAPI(fullPrompt, currentStore));
     }
 
@@ -3727,12 +3748,26 @@ async function getHistory() {
   return getLocalHistory();
 }
 
+// Button icons. These were assigned with textContent, which printed the SVG
+// source as literal text on the mic and History buttons. The markup is fixed
+// here and never built from input; any label goes in as a text node.
+const ICON_SVG = {
+  stop:    '<rect x="6" y="6" width="12" height="12" rx="2"/>',
+  mic:     '<path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><path d="M12 19v4"/>',
+  history: '<path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 106 5.3L3 8"/><path d="M12 7v5l4 2"/>',
+};
+function setIcon(el, name, label) {
+  el.innerHTML = '<svg class="ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+    + 'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICON_SVG[name] + '</svg>';
+  if (label) el.appendChild(document.createTextNode(' ' + label));
+}
+
 async function refreshHistoryTrigger() {
   const history = await getHistory();
   const count   = history.length;
   const btn     = document.getElementById('historyTrigger');
   btn.classList.toggle('has-items', count > 0);
-  btn.textContent = count > 0 ? `<svg class="ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 106 5.3L3 8"/><path d="M12 7v5l4 2"/></svg> History (${count})` : '<svg class="ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 106 5.3L3 8"/><path d="M12 7v5l4 2"/></svg> History';
+  setIcon(btn, 'history', count > 0 ? `History (${count})` : 'History');
 }
 
 async function openHistory() {

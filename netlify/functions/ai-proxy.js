@@ -416,8 +416,12 @@ function pickProvider(tier, hasImage) {
 // is free/beta. Before charging money, verify a Firebase ID token here with the
 // Admin SDK and read the plan from Firestore — a client-declared "pro" is just
 // a devtools edit away from free premium access.
-function resolveTier(body) {
-  return body.tier === 'pro' ? 'pro' : 'free';
+// The tier is never taken from the request. Trusting body.tier let anyone send
+// {"tier":"pro"} and get paid Claude calls at the Pro limit the moment an
+// Anthropic key was configured. The council verifies Pro server-side; until
+// this path does the same, every proxy request is free tier.
+function resolveTier(/* body */) {
+  return 'free';
 }
 
 // Same list as ai-council.js. Duplicated because esbuild bundles each function
