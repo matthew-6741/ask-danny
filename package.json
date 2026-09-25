@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "description": "Serverless functions for Ask Danny",
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.128.0",
     "@netlify/blobs": "^11.0.3"
   }
 }

@@ -803,27 +803,62 @@ async function geminiOnce(model, system, prompt, maxTokens, image) {
   return data.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('') || '';
 }
 
-async function callClaude(system, prompt, maxTokens, image) {
+// ── Claude ───────────────────────────────────────────────────────────
+// Paid tier only: free requests never reach this (see eligibleAgents). Written
+// against the current API with the official SDK. The raw call it replaced sent
+// `temperature`, which current models reject with a 400, and sized max_tokens
+// for the answer alone, while thinking (on by default since Claude Opus 5)
+// counts against the same cap.
+const Anthropic = require('@anthropic-ai/sdk');
+const CLAUDE_MODEL = () => process.env.ANTHROPIC_MODEL || 'claude-opus-5';
+// medium: a parts list is short, and Opus 5 is strong at low and medium effort.
+// It also keeps latency inside the council's per-stage timeout.
+const CLAUDE_EFFORT = () => process.env.ANTHROPIC_EFFORT || 'medium';
+
+let claudeClientCache = null;
+function claudeClient() {
+  const apiKey = keyFor('ANTHROPIC_API_KEY');
+  if (!claudeClientCache || claudeClientCache.apiKey !== apiKey) {
+    // `fetch` is passed through so the in-process checks can mock it; in
+    // production it is the global fetch.
+    claudeClientCache = new Anthropic({ apiKey, maxRetries: 1, fetch: (...a) => fetch(...a) });
+  }
+  return claudeClientCache;
+}
+
+// Returns the whole message, so callers that care (the eval) can read usage.
+async function claudeMessage(system, prompt, maxTokens, image, { effort, timeoutMs } = {}) {
   const content = image
     ? [{ type: 'image', source: { type: 'base64', media_type: image.mediaType, data: image.base64 } },
        { type: 'text', text: prompt }]
     : prompt;
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': keyFor('ANTHROPIC_API_KEY'),
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model: process.env.ANTHROPIC_MODEL || 'claude-opus-4-6',
-      max_tokens: maxTokens, temperature: 0, system,
-      messages: [{ role: 'user', content }],
-    }),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error?.message || `Claude ${res.status}`);
-  return data.content?.map(b => b.text || '').join('') || '';
+  const response = await claudeClient().beta.messages.create({
+    model: CLAUDE_MODEL(),
+    // Room for adaptive thinking on top of the list itself. Only tokens that
+    // are actually generated are billed.
+    max_tokens: Math.max(maxTokens, 16000),
+    output_config: { effort: effort || CLAUDE_EFFORT() },
+    // If a safety classifier declines, re-run on Anthropic's recommended model
+    // for that category instead of returning nothing.
+    betas: ['server-side-fallback-2026-07-01'],
+    fallbacks: 'default',
+    system,
+    messages: [{ role: 'user', content }],
+  }, timeoutMs ? { timeout: timeoutMs } : undefined);
+  if (response.stop_reason === 'refusal') {
+    const e = new Error(`Claude declined (${(response.stop_details && response.stop_details.category) || 'refusal'})`);
+    e.refusal = true;
+    throw e;
+  }
+  return response;
+}
+
+function claudeText(response) {
+  return (response.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+}
+
+async function callClaude(system, prompt, maxTokens, image) {
+  return claudeText(await claudeMessage(system, prompt, maxTokens, image));
 }
 
 const AGENTS = [
@@ -1208,6 +1243,31 @@ function recordFailure(id) {
 
 // ── Handler ──────────────────────────────────────────────────────────
 
+// The prompt, token cap, inventory and system prompt for one job. Built here,
+// never taken from the request. Shared by the handler and draftWith, so the
+// eval's comparison sends exactly what the live council sends.
+function jobContext(body, maxTokensCap) {
+  const prompt = sanitizeInput(body.prompt || '');
+  const maxTokens = Math.min(Number(body.max_tokens) || 1600, maxTokensCap);
+
+  // Retrieval happens here, from our own database — after `prompt` exists.
+  // products.json is Home Depot data (meta.store). Offering its aisles as
+  // "verified" on a Lowe's or AutoZone list sent people to the wrong aisle while
+  // telling them it was checked. Other stores get no inventory, so every aisle
+  // on their lists is honestly marked unverified.
+  const inventoryStore = (PRODUCTS.meta && PRODUCTS.meta.store) || 'Home Depot';
+  const storeName = (STORES[body.store] || STORES.hd).name;
+  const serverInventory = storeName === inventoryStore ? lookupInventory(body.trade, prompt) : [];
+  const system = buildSystemPrompt({
+    storeKey:      body.store,
+    trade:         body.trade,
+    city:          body.city,
+    region:        body.region,
+    inventoryRows: serverInventory,
+  });
+  return { prompt, maxTokens, serverInventory, system };
+}
+
 exports.handler = async (event) => {
   connectBlobs(event);
   const startedAt = Date.now();
@@ -1254,25 +1314,9 @@ exports.handler = async (event) => {
     };
   }
 
-  // Built here, never taken from the request.
-  const prompt = sanitizeInput(body.prompt || '');
-  const maxTokens = Math.min(Number(body.max_tokens) || 1600, plan.maxTokens);
-
-  // Retrieval happens here, from our own database — after `prompt` exists.
-  // products.json is Home Depot data (meta.store). Offering its aisles as
-  // "verified" on a Lowe's or AutoZone list sent people to the wrong aisle while
-  // telling them it was checked. Other stores get no inventory, so every aisle
-  // on their lists is honestly marked unverified.
-  const inventoryStore = (PRODUCTS.meta && PRODUCTS.meta.store) || 'Home Depot';
-  const storeName = (STORES[body.store] || STORES.hd).name;
-  const serverInventory = storeName === inventoryStore ? lookupInventory(body.trade, prompt) : [];
-  let system = buildSystemPrompt({
-    storeKey:      body.store,
-    trade:         body.trade,
-    city:          body.city,
-    region:        body.region,
-    inventoryRows: serverInventory,
-  });
+  const job = jobContext(body, plan.maxTokens);
+  const { prompt, maxTokens, serverInventory } = job;
+  let system = job.system;
 
 
   const image = validateImage(body.image);
@@ -1477,4 +1521,29 @@ exports.handler = async (event) => {
       },
     }),
   };
+};
+
+// For eval/run.js --compare only: one provider answers the exact prompt the
+// council would send, with no plan gating and no per-stage timeout, so a slower
+// paid model can be compared fairly with the free council. Netlify only ever
+// invokes `handler`.
+exports.draftWith = async function draftWith(agentId, body, { effort, timeoutMs = 120000 } = {}) {
+  const job = jobContext(body, planFor('free').maxTokens);
+  const image = validateImage(body.image) || null;
+  const started = Date.now();
+  let raw, usage = null, model = null;
+  if (agentId === 'claude') {
+    const response = await claudeMessage(job.system, job.prompt, job.maxTokens, image, { effort, timeoutMs });
+    raw = claudeText(response);
+    usage = response.usage || null;
+    model = response.model || CLAUDE_MODEL();
+  } else {
+    const agent = AGENTS.find(a => a.id === agentId);
+    if (!agent) throw new Error(`Unknown agent: ${agentId}`);
+    raw = await agent.call(job.system, job.prompt, job.maxTokens, image);
+  }
+  const parsed = normalizeResponse(raw);
+  const items = verifyAisles(parsed.items,
+    job.serverInventory.map(p => ({ name: p.name, aisle: `Aisle ${p.aisle}` })));
+  return { notes: parsed.notes, tools: parsed.tools, items, ms: Date.now() - started, usage, model };
 };

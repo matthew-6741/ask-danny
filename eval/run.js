@@ -14,6 +14,13 @@
  *   node eval/run.js --limit 10          # first N
  *   node eval/run.js --endpoint council  # council instead of single model
  *   node eval/run.js --local             # run the council code on this machine
+ *   node eval/run.js --compare claude    # also ask Claude each job, side by side
+ *
+ * --compare claude implies --local. Each job runs through the free council and
+ * through Claude with the identical prompt, and a comparison sheet asks a
+ * grader which list is better. Needs ANTHROPIC_API_KEY in .env.local, and it
+ * spends real money: roughly a few cents a job, with the total printed at the
+ * end. --claude-effort low|medium|high overrides the effort level.
  *
  * --local loads netlify/functions/ai-council.js in-process and calls the model
  * providers directly, so it spends no Netlify credits and is not held to the
@@ -38,7 +45,10 @@ const LIMIT     = parseInt(opt('--limit', '0'), 10);
 // The app calls /api/council, so that is what the eval must measure. Defaulting
 // to the proxy graded a path no user takes, and produced 15 jobs of zeros.
 const ENDPOINT  = opt('--endpoint', 'council');
-const LOCAL     = args.includes('--local');
+const COMPARE   = opt('--compare', null);
+if (COMPARE && COMPARE !== 'claude') { console.error('--compare only supports "claude".'); process.exit(1); }
+const LOCAL     = args.includes('--local') || !!COMPARE;
+const CLAUDE_EFFORT = opt('--claude-effort', null);
 // Local runs hit the providers' free-tier rate limits directly, so pace them.
 const DELAY_MS  = parseInt(opt('--delay', LOCAL ? '4000' : '1500'), 10);
 
@@ -58,15 +68,21 @@ function loadLocalEnv() {
 }
 
 let localHandler = null;
+let localModule = null;
 if (LOCAL) {
   const loaded = loadLocalEnv();
-  const present = ['GEMINI_API_KEY', 'GROQ_API_KEY'].filter(k => process.env[k]);
+  const present = ['GEMINI_API_KEY', 'GROQ_API_KEY', ...(COMPARE ? ['ANTHROPIC_API_KEY'] : [])].filter(k => process.env[k]);
   console.log(`local mode: keys present ${present.join(', ') || 'none'}${loaded.length ? ` (from .env.local)` : ''}`);
   if (!present.length) {
     console.error('No provider keys. Put GEMINI_API_KEY and/or GROQ_API_KEY in .env.local at the repo root.');
     process.exit(1);
   }
-  localHandler = require(path.join(__dirname, '..', 'netlify', 'functions', 'ai-council.js')).handler;
+  if (COMPARE && !process.env.ANTHROPIC_API_KEY) {
+    console.error('--compare claude needs ANTHROPIC_API_KEY in .env.local.');
+    process.exit(1);
+  }
+  localModule = require(path.join(__dirname, '..', 'netlify', 'functions', 'ai-council.js'));
+  localHandler = localModule.handler;
 }
 
 const { jobs } = JSON.parse(fs.readFileSync(path.join(__dirname, 'jobs.json'), 'utf8'));
@@ -157,6 +173,32 @@ async function runJob(job) {
   };
 }
 
+// Per million tokens, from Anthropic's published prices. Used only to print an
+// estimate; the real bill is on console.anthropic.com.
+const CLAUDE_PRICES = {
+  'claude-opus-5':   { in: 5, out: 25 },
+  'claude-opus-5-5': { in: 4, out: 20 },
+  'claude-sonnet-5': { in: 2, out: 10 },
+  'claude-haiku-4-5': { in: 1, out: 5 },
+};
+
+async function runClaude(job) {
+  const body = { tier: 'free', prompt: job.text, store: 'hd', trade: job.trade, max_tokens: 1600 };
+  try {
+    const d = await localModule.draftWith('claude', body, { effort: CLAUDE_EFFORT || undefined });
+    const covered = essentialsCovered(d.items, d.notes, job.expectEssential || []);
+    return {
+      ms: d.ms, model: d.model, usage: d.usage,
+      itemCount: d.items.length, verifiedCount: d.items.filter(i => i.aisleVerified).length,
+      items: d.items, notes: d.notes, covered,
+      missing: covered.filter(c => !c.found).map(c => c.term),
+      safetyFlagged: SAFETY_WORDS.test(d.notes || ''),
+    };
+  } catch (e) {
+    return { error: e.refusal ? 'declined by safety classifier' : String(e.message).slice(0, 160) };
+  }
+}
+
 function csvCell(v) {
   const s = String(v == null ? '' : v).replace(/"/g, '""');
   return /[",\n]/.test(s) ? `"${s}"` : s;
@@ -170,6 +212,7 @@ function csvCell(v) {
     const job = queue[i];
     process.stdout.write(`[${String(i + 1).padStart(2)}/${queue.length}] ${job.id} ${job.text.slice(0, 44).padEnd(46)}`);
     const r = await runJob(job);
+    if (COMPARE) r.claude = await runClaude(job);
     results.push(r);
 
     if (r.error) {
@@ -178,6 +221,11 @@ function csvCell(v) {
       const miss = r.missing.length ? `missing: ${r.missing.join(', ')}` : 'all essentials present';
       const trap = job.trap ? (r.safetyFlagged ? ' [safety flagged]' : ' [SAFETY NOT FLAGGED]') : '';
       console.log(`${String(r.itemCount).padStart(2)} items  ${String(r.verifiedCount)} verified  ${miss}${trap}`);
+    }
+    if (r.claude) {
+      const c = r.claude;
+      console.log(`       claude  ${c.error ? `ERROR  ${c.error.slice(0, 60)}`
+        : `${String(c.itemCount).padStart(2)} items  ${c.missing.length ? `missing: ${c.missing.join(', ')}` : 'all essentials present'}  ${(c.ms / 1000).toFixed(1)}s`}`);
     }
     if (i < queue.length - 1) await sleep(DELAY_MS);
   }
@@ -247,10 +295,59 @@ function csvCell(v) {
   const byJobPath = csvPath.replace(/\.csv$/, '-by-job.csv');
   fs.writeFileSync(byJobPath, byJob.map(r => r.map(csvCell).join(',')).join('\n'));
 
+  let comparePath = null;
+  if (COMPARE) {
+    const cOk = results.filter(r => r.claude && !r.claude.error);
+    const cEss = cOk.filter(r => (r.job.expectEssential || []).length);
+    const cTraps = results.filter(r => r.job.trap && r.claude && !r.claude.error);
+    const tokIn = cOk.reduce((n, r) => n + ((r.claude.usage && r.claude.usage.input_tokens) || 0), 0);
+    const tokOut = cOk.reduce((n, r) => n + ((r.claude.usage && r.claude.usage.output_tokens) || 0), 0);
+    const model = (cOk[0] && cOk[0].claude.model) || 'claude-opus-5';
+    const price = CLAUDE_PRICES[model] || CLAUDE_PRICES['claude-opus-5'];
+    const cost = (tokIn * price.in + tokOut * price.out) / 1e6;
+    const med = xs => { const t = xs.sort((a, b) => a - b); return t.length ? (t[Math.floor(t.length / 2)] / 1000).toFixed(1) + 's' : 'n/a'; };
+    console.log(`\n  CLAUDE (${model}, effort ${CLAUDE_EFFORT || 'default'})`);
+    console.log(`  completed          ${cOk.length}/${results.length}`);
+    console.log(`  essentials covered ${cEss.filter(r => !r.claude.missing.length).length}/${cEss.length} jobs   (free council: ${fullyCovered.length}/${withEssentials.length})`);
+    console.log(`  safety/trap jobs   ${cTraps.filter(r => r.claude.safetyFlagged).length}/${cTraps.length} flagged   (free council: ${trapsFlagged.length}/${trapsAnswered.length})`);
+    console.log(`  median latency     ${med(cOk.map(r => r.claude.ms))}`);
+    console.log(`  tokens             ${tokIn} in, ${tokOut} out`);
+    console.log(`  estimated cost     $${cost.toFixed(2)} total, $${cOk.length ? (cost / cOk.length).toFixed(3) : '0'} per list${CLAUDE_PRICES[model] ? '' : ' (priced as claude-opus-5)'}`);
+    console.log('─────────────────────────────────────────────');
+
+    const listOf = x => x.error ? `ERROR: ${x.error}`
+      : (x.items.map(i => [i.qty, i.name, i.spec && `(${i.spec})`].filter(Boolean).join(' ')).join('; ') || '(no items)');
+    // Blind: each job's two lists appear as A and B in random order, so the
+    // grader judges the list and not the label. The key goes in its own file.
+    const cmp = [[
+      'job_id', 'trade', 'what_the_customer_said', 'safety_trap',
+      'list_A', 'notes_A', 'list_B', 'notes_B',
+      'GRADER: which would you hand a customer? (A / B / same)', 'GRADER: why?',
+    ]];
+    const key = [['job_id', 'A', 'B', 'free_missing_essentials', 'claude_missing_essentials']];
+    results.forEach(r => {
+      const c = r.claude || { error: 'not run' };
+      const flip = Math.random() < 0.5;
+      const [A, B] = flip ? [c, r] : [r, c];
+      cmp.push([r.job.id, r.job.trade, r.job.text, r.job.trap ? 'yes' : '',
+        listOf(A), String(A.notes || '').replace(/\s+/g, ' ').slice(0, 400),
+        listOf(B), String(B.notes || '').replace(/\s+/g, ' ').slice(0, 400), '', '']);
+      key.push([r.job.id, flip ? 'claude' : 'free', flip ? 'free' : 'claude',
+        (r.missing || []).join('; '), (c.missing || []).join('; ')]);
+    });
+    comparePath = csvPath.replace(/\.csv$/, '-compare.csv');
+    fs.writeFileSync(comparePath.replace(/\.csv$/, '-KEY.csv'), key.map(r => r.map(csvCell).join(',')).join('\n'));
+    fs.writeFileSync(comparePath, cmp.map(r => r.map(csvCell).join(',')).join('\n'));
+  }
+
   const jsonPath = path.join(__dirname, `results-${stamp}.json`);
   fs.writeFileSync(jsonPath, JSON.stringify(results, null, 2));
 
-  console.log(`\nfor a grader   ${path.relative(process.cwd(), byJobPath)}   (one row per job)`);
+  if (comparePath) {
+    console.log(`\nblind A/B      ${path.relative(process.cwd(), comparePath)}   (send this to the grader)`);
+    console.log(`answer key     ${path.relative(process.cwd(), comparePath.replace(/\.csv$/, '-KEY.csv'))}   (keep this; it says which is Claude)`);
+  }
+  console.log(`${comparePath ? '' : '\n'}for a grader   ${path.relative(process.cwd(), byJobPath)}   (one row per job)`);
   console.log(`grading sheet  ${path.relative(process.cwd(), csvPath)}`);
   console.log(`raw results    ${path.relative(process.cwd(), jsonPath)}`);
   console.log(`\nOpen the CSV, fill the three TRADESPERSON columns, and the misses`);

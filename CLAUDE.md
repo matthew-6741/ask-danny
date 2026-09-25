@@ -138,7 +138,7 @@ it clears 4.5:1. Every text colour on the site passes WCAG AA.
 
 The site has been linked to GitHub (`matthew-6741/ask-danny`, branch `main`)
 since 2026-09-16. **Pushing to `main` deploys to production.** Netlify runs
-`scripts/build.js`, which runs `eval/local-check.js` (118 checks) and fails the
+`scripts/build.js`, which runs `eval/local-check.js` (135 checks) and fails the
 build if any fail. It then copies an explicit allowlist of 11 site files into
 `dist/`, which is what gets published. Functions deploy from
 `netlify/functions/`.

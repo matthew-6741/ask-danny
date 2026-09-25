@@ -831,6 +831,53 @@ const TINY_JPEG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z
        /const notice = \[compareData\.hd, compareData\.lw\]\.find/.test(html));
   }
 
+  // Claude, through the official SDK. Paid tier only; the eval compares it
+  // with the free council through draftWith. Responses are mocked here.
+  {
+    process.env.ANTHROPIC_API_KEY = 'sk-ant-' + 'z'.repeat(40);
+    const seen = [];
+    let reply = null;
+    const claudeFetch = async (url, opts = {}) => {
+      const u = String(url);
+      if (u.includes('anthropic.com')) {
+        seen.push({ headers: new Headers(opts.headers), body: JSON.parse(opts.body) });
+        return new Response(JSON.stringify(reply), { status: 200, headers: { 'content-type': 'application/json' } });
+      }
+      return u.includes('googleapis') ? geminiBody(GOOD_JSON) : groqBody(GOOD_JSON);
+    };
+    const mod = load('ai-council.js', claudeFetch);
+
+    reply = { id: 'msg_1', type: 'message', role: 'assistant', model: 'claude-opus-5',
+      stop_reason: 'end_turn', stop_details: null,
+      content: [{ type: 'thinking', thinking: '', signature: 'sig' }, { type: 'text', text: GOOD_JSON }],
+      usage: { input_tokens: 3000, output_tokens: 900 } };
+    const r = await mod.draftWith('claude', { prompt: 'toilet keeps running', store: 'hd', trade: 'plumbing' });
+    ok('claude: reads the list from text blocks and ignores thinking blocks',
+       r.items.length > 0 && r.usage && r.usage.output_tokens === 900, JSON.stringify(r).slice(0, 120));
+    const req = seen[0] || { body: {}, headers: new Headers() };
+    ok('claude: current model, and no sampling params (current models reject them)',
+       req.body.model === 'claude-opus-5' && !('temperature' in req.body) && !('top_p' in req.body), req.body.model);
+    ok('claude: max_tokens leaves room for thinking', req.body.max_tokens >= 16000, String(req.body.max_tokens));
+    ok('claude: opts into default refusal fallbacks',
+       req.body.fallbacks === 'default' && /server-side-fallback-2026-07-01/.test(req.headers.get('anthropic-beta') || ''),
+       `${req.body.fallbacks} / ${req.headers.get('anthropic-beta')}`);
+    ok('claude: uses the same system prompt the council uses', /VERIFIED STORE INVENTORY/.test(JSON.stringify(req.body.system || '')));
+
+    reply = { id: 'msg_2', type: 'message', role: 'assistant', model: 'claude-opus-5',
+      stop_reason: 'refusal', stop_details: { type: 'refusal', category: null, explanation: null },
+      content: [], usage: { input_tokens: 10, output_tokens: 0 } };
+    let refused = null;
+    try { await mod.draftWith('claude', { prompt: 'toilet keeps running', store: 'hd', trade: 'plumbing' }); }
+    catch (e) { refused = e; }
+    ok('claude: a refusal is reported, not read as an empty list', !!(refused && refused.refusal));
+
+    // The free tier must never spend money on Claude, even with a key set.
+    seen.length = 0;
+    const free = await mod.handler(evt({ tier: 'free', prompt: 'toilet keeps running', store: 'hd', trade: 'plumbing' }));
+    ok('claude: a free-tier request never calls Claude', free.statusCode === 200 && seen.length === 0, `calls=${seen.length}`);
+    delete process.env.ANTHROPIC_API_KEY;
+  }
+
   // Build-skip rule. Each production deploy costs 15 credits, so docs-only
   // pushes skip the build. The guards matter more than the diff: without them
   // a first build, or a deliberate redeploy of the same commit after an

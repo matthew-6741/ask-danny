@@ -35,3 +35,10 @@ clear "leave it and call a pro or the utility."
 
 Short notes are plenty ("needs a wax ring", "wrong thread size"). Blunt is
 better than polite: the misses are what get fixed.
+
+## If you got the comparison sheet
+
+`results-<date>-compare.csv` shows two lists for each job, A and B. They come
+from two different setups, in a random order that changes from row to row. For
+each row, say which list you'd rather hand a customer (`A`, `B` or `same`) and
+why, in a few words. Which setup is which stays hidden until you're done.
