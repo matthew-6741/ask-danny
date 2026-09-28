@@ -13,6 +13,17 @@ location.
 
 ## Filling one in
 
+The quickest way is the helper page. Open it in Chrome, press **Open
+checklist**, pick a file from `checklists/`, and it saves each entry straight
+back to that file:
+
+```bash
+open -a "Google Chrome" ~/diagnostech-trade/store-data/helper.html
+```
+
+It works in other browsers too, but only Chrome and Edge can write to the file;
+elsewhere, press Download CSV when you finish. By hand, the steps are:
+
 1. Open the store's website and **set that store as your store**. Aisle and bay
    numbers only show for a selected store.
 2. Start with the rows marked `priority` (40 per home store, 15 at AutoZone).

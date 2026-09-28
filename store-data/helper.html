@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aisle Lookup Helper</title>
+<style>
+  :root {
+    --bg: #faf8f5; --surface: #fff; --subtle: #e8e6e1; --border: #d1d1cd;
+    --text: #000; --ink: #27251e; --muted: #72706b; --accent: #016a71;
+    --accent-light: #e6f0f0; --red: #b3261e; --pill: 9999px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  main { max-width: 640px; margin: 0 auto; padding: 24px 16px 64px; }
+  h1 { font-size: 24px; font-weight: 500; margin: 0 0 4px; }
+  h2 { font-size: 20px; font-weight: 500; margin: 0 0 4px; }
+  p { margin: 0 0 8px; }
+  .muted { color: var(--muted); font-size: 14px; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  button, .btn {
+    font: inherit; font-size: 14px; font-weight: 500; cursor: pointer;
+    border-radius: var(--pill); padding: 8px 16px; min-height: 40px;
+    border: 1px solid var(--border); background: var(--surface); color: var(--ink);
+    text-decoration: none; display: inline-flex; align-items: center; justify-content: center;
+  }
+  button:hover, .btn:hover { background: var(--subtle); }
+  .primary { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .primary:hover { background: #000; }
+  .bar { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 8px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 16px; margin: 16px 0; }
+  .lookup { margin: 12px 0 16px; background: var(--accent); border-color: var(--accent); color: #fff; }
+  .lookup:hover { background: #014f55; }
+  form { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  label { display: grid; gap: 4px; font-size: 14px; color: var(--ink); }
+  input[type=text] {
+    font: inherit; padding: 8px 12px; border: 1px solid var(--border);
+    border-radius: 12px; background: var(--surface); min-height: 44px; width: 100%;
+  }
+  input[type=text]:focus { border-color: var(--accent); outline: none; }
+  .wide { grid-column: 1 / -1; }
+  fieldset { border: 0; padding: 0; margin: 0; display: flex; gap: 16px; align-items: center; font-size: 14px; }
+  fieldset label { display: inline-flex; gap: 6px; align-items: center; }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+  .err { color: var(--red); font-size: 14px; min-height: 20px; margin: 0; }
+  .track { height: 8px; background: var(--subtle); border-radius: var(--pill); overflow: hidden; margin: 8px 0; }
+  .fill { height: 100%; background: var(--accent); width: 0; transition: width .2s; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 6px 8px; border-top: 1px solid var(--border); }
+  tr.row { cursor: pointer; }
+  tr.row:hover td { background: var(--bg); }
+  tr.current td { background: var(--accent-light); }
+  .done { color: var(--accent); font-weight: 500; }
+  details summary { cursor: pointer; font-weight: 500; padding: 8px 0; }
+  .saved { color: var(--accent); font-size: 14px; }
+  .saved.warn { color: var(--red); }
+  @media (max-width: 520px) { form { grid-template-columns: 1fr 1fr; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Aisle lookup helper</h1>
+  <p class="muted" id="storeLine">Open one of the checklists in <code>store-data/checklists/</code> to start.</p>
+
+  <div class="bar">
+    <button class="primary" id="openBtn" type="button">Open checklist</button>
+    <input type="file" id="fileInput" accept=".csv,text/csv" hidden>
+    <button id="downloadBtn" type="button" hidden>Download CSV</button>
+  </div>
+  <p class="saved" id="saveState" role="status" aria-live="polite"></p>
+
+  <section id="intro" class="card">
+    <p><strong>Before you start:</strong> open the store's website and set that store as your store.
+      Aisle and bay numbers only show for a selected store.</p>
+    <p class="muted">Then for each part: press the green button, open the product that matches, and copy the
+      aisle, bay and price here. Enter saves and moves to the next part.</p>
+  </section>
+
+  <section id="work" hidden>
+    <div>
+      <span id="progressText"></span>
+      <div class="track" aria-hidden="true"><div class="fill" id="progressFill"></div></div>
+      <label style="display:inline-flex;gap:6px;align-items:center">
+        <input type="checkbox" id="showAll"> Include the non-priority parts
+      </label>
+    </div>
+
+    <article class="card" aria-labelledby="pName">
+      <p class="muted" id="pMeta"></p>
+      <h2 id="pName"></h2>
+      <p id="pSpec"></p>
+      <a class="btn lookup" id="lookup" target="_blank" rel="noopener noreferrer">Look it up</a>
+
+      <form id="entry" novalidate>
+        <label>Aisle <input type="text" id="fAisle" autocomplete="off"></label>
+        <label>Bay <input type="text" id="fBay" autocomplete="off"></label>
+        <label>Price <input type="text" id="fPrice" inputmode="decimal" autocomplete="off" placeholder="8.47"></label>
+        <fieldset class="wide">
+          <legend class="muted" style="float:left;margin-right:8px">In stock at this store?</legend>
+          <label><input type="radio" name="stock" value="y"> Yes</label>
+          <label><input type="radio" name="stock" value="n"> No</label>
+        </fieldset>
+        <label class="wide">Notes <input type="text" id="fNotes" autocomplete="off" placeholder="e.g. only the 2-pack"></label>
+        <p class="err wide" id="err" role="alert"></p>
+        <div class="actions wide">
+          <button type="button" id="backBtn">Back</button>
+          <button type="button" id="counterBtn" hidden>Behind the counter</button>
+          <button type="button" id="notSoldBtn">Not sold here</button>
+          <button type="button" id="skipBtn">Skip</button>
+          <button type="submit" class="primary">Save &amp; next</button>
+        </div>
+      </form>
+    </article>
+
+    <details>
+      <summary>All parts in this list</summary>
+      <table>
+        <thead><tr><th>Part</th><th>Aisle</th><th>Bay</th><th>Price</th><th></th></tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </details>
+  </section>
+</main>
+
+<script>
+// Filled in by hand, one part at a time. Nothing here fetches from the store
+// sites: the lookup button only opens a normal search page in a new tab.
+(function () {
+  const $ = id => document.getElementById(id);
+  const S = { name: '', header: [], rows: [], handle: null, list: [], pos: 0 };
+
+  const STORES = {
+    'home-depot-wilshire-union-1048': 'Home Depot, Wilshire/Union (#1048)',
+    'lowes-mid-city-la-2714': "Lowe's, Mid-City Los Angeles (#2714)",
+    'autozone-2907-s-vermont': 'AutoZone, 2907 S Vermont Ave',
+  };
+  const chainOf = n => /^home/.test(n) ? 'Home Depot' : /^lowe/.test(n) ? "Lowe's" : /^auto/.test(n) ? 'AutoZone' : 'the store';
+
+  // ── CSV ────────────────────────────────────────────────────────────────
+  function parseCSV(text) {
+    const out = []; let row = [], cell = '', q = false;
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      if (q) {
+        if (c === '"' && text[i + 1] === '"') { cell += '"'; i++; }
+        else if (c === '"') q = false;
+        else cell += c;
+      } else if (c === '"') q = true;
+      else if (c === ',') { row.push(cell); cell = ''; }
+      else if (c === '\n' || c === '\r') {
+        if (c === '\r' && text[i + 1] === '\n') i++;
+        row.push(cell); out.push(row); row = []; cell = '';
+      } else cell += c;
+    }
+    if (cell || row.length) { row.push(cell); out.push(row); }
+    return out.filter(r => r.some(v => v !== ''));
+  }
+  const cellOut = v => /[",\n\r]/.test(v) ? '"' + String(v).replace(/"/g, '""') + '"' : String(v);
+  const toCSV = () => [S.header, ...S.rows.map(r => S.header.map(h => r[h] ?? ''))]
+    .map(r => r.map(cellOut).join(',')).join('\n') + '\n';
+
+  // ── columns ────────────────────────────────────────────────────────────
+  const col = prefix => S.header.find(h => h.startsWith(prefix));
+  const A = () => col('aisle'), STOCK = () => col('in_stock');
+  const isDone = r => !!(r[A()] || r[STOCK()] === 'n');
+
+  // ── load ───────────────────────────────────────────────────────────────
+  function load(name, text, handle) {
+    const grid = parseCSV(text);
+    if (!grid.length || !grid[0].includes('part')) {
+      $('saveState').textContent = 'That file is not one of the checklists.';
+      return;
+    }
+    S.name = name; S.handle = handle || null;
+    S.header = grid[0];
+    S.rows = grid.slice(1).map(r => Object.fromEntries(S.header.map((h, i) => [h, r[i] ?? ''])));
+    if (!S.handle) restoreDraft();
+    const slug = name.replace(/\.csv$/, '');
+    $('storeLine').textContent = (STORES[slug] || name) + (S.handle
+      ? ' — saving to the file as you go.'
+      : ' — opened without file access, so press Download CSV when you finish.');
+    $('downloadBtn').hidden = false;
+    $('counterBtn').hidden = chainOf(slug) !== 'AutoZone';
+    $('fAisle').placeholder = chainOf(slug) === 'AutoZone' ? '12 or counter' : '27';
+    $('intro').hidden = true; $('work').hidden = false;
+    buildList(true);
+  }
+
+  function buildList(jumpToFirstOpen) {
+    const all = $('showAll').checked;
+    S.list = S.rows.map((r, i) => i).filter(i => all || S.rows[i].priority === 'yes');
+    if (jumpToFirstOpen) {
+      const open = S.list.findIndex(i => !isDone(S.rows[i]));
+      S.pos = open === -1 ? 0 : open;
+    }
+    S.pos = Math.min(S.pos, Math.max(0, S.list.length - 1));
+    render();
+  }
+
+  // ── render ─────────────────────────────────────────────────────────────
+  function render() {
+    const done = S.list.filter(i => isDone(S.rows[i])).length;
+    $('progressText').textContent = `${done} of ${S.list.length} done`;
+    $('progressFill').style.width = S.list.length ? (100 * done / S.list.length) + '%' : '0';
+    const r = S.rows[S.list[S.pos]];
+    if (!r) return;
+    const jobs = r.jobs_that_need_it ? ` · needed by ${r.jobs_that_need_it} test job${r.jobs_that_need_it === '1' ? '' : 's'}` : '';
+    $('pMeta').textContent = `Part ${S.pos + 1} of ${S.list.length} · ${r.trade}${jobs}`;
+    $('pName').textContent = r.part;
+    $('pSpec').textContent = r.spec || '';
+    $('lookup').href = r.lookup_link;
+    $('lookup').textContent = `Look it up at ${chainOf(S.name)}`;
+    $('fAisle').value = r[A()] || '';
+    $('fBay').value = r.bay || '';
+    $('fPrice').value = r.price || '';
+    $('fNotes').value = r.notes || '';
+    document.querySelectorAll('input[name=stock]').forEach(x => { x.checked = x.value === r[STOCK()]; });
+    $('err').textContent = '';
+    $('backBtn').disabled = S.pos === 0;
+    renderTable();
+  }
+
+  function renderTable() {
+    const tb = $('tbody'); tb.textContent = '';
+    S.list.forEach((i, pos) => {
+      const r = S.rows[i], tr = document.createElement('tr');
+      tr.className = 'row' + (pos === S.pos ? ' current' : '');
+      [r.part, r[A()], r.bay, r.price, isDone(r) ? (r[STOCK()] === 'n' ? 'not sold' : 'done') : '']
+        .forEach((v, k) => { const td = document.createElement('td'); td.textContent = v || ''; if (k === 4 && v) td.className = 'done'; tr.appendChild(td); });
+      tr.addEventListener('click', () => { S.pos = pos; render(); $('fAisle').focus(); });
+      tb.appendChild(tr);
+    });
+  }
+
+  // ── save ───────────────────────────────────────────────────────────────
+  async function persist() {
+    const text = toCSV();
+    if (S.handle) {
+      try {
+        const w = await S.handle.createWritable();
+        await w.write(text); await w.close();
+        $('saveState').classList.remove('warn');
+        $('saveState').textContent = 'Saved to ' + S.name + ' at ' + new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+        return;
+      } catch (e) {
+        S.handle = null;
+        $('saveState').textContent = 'Could not write to the file, so progress is kept in this browser. Use Download CSV when you finish.';
+        $('saveState').classList.add('warn');
+      }
+    }
+    try {
+      localStorage.setItem('aisle-helper:' + S.name, text);
+      if (!$('saveState').textContent.startsWith('Could not')) $('saveState').textContent = 'Progress kept in this browser.';
+    } catch {
+      // Say so plainly: claiming progress was kept when it wasn't loses work.
+      $('saveState').textContent = 'This browser is not keeping your progress. Press Download CSV before you close this page.';
+      $('saveState').classList.add('warn');
+    }
+  }
+
+  function restoreDraft() {
+    let text = null;
+    try { text = localStorage.getItem('aisle-helper:' + S.name); } catch { /* ignore */ }
+    if (!text) return;
+    const grid = parseCSV(text); if (!grid.length) return;
+    const h = grid[0];
+    const draft = new Map(grid.slice(1).map(r => [r[h.indexOf('part')] + '|' + r[h.indexOf('spec')], Object.fromEntries(h.map((k, i) => [k, r[i] ?? '']))]));
+    S.rows.forEach(r => {
+      const d = draft.get(r.part + '|' + r.spec); if (!d) return;
+      S.header.forEach(k => { if (!r[k] && d[k]) r[k] = d[k]; });
+    });
+  }
+
+  function next() { if (S.pos < S.list.length - 1) S.pos++; render(); $('fAisle').focus(); }
+
+  async function save(e) {
+    if (e) e.preventDefault();
+    const r = S.rows[S.list[S.pos]];
+    const stock = (document.querySelector('input[name=stock]:checked') || {}).value || '';
+    let aisle = $('fAisle').value.trim(), bay = $('fBay').value.trim(), price = $('fPrice').value.trim().replace(/^\$/, '');
+    if (stock !== 'n') {
+      if (!aisle) { $('err').textContent = 'Add the aisle, or mark it not sold here.'; $('fAisle').focus(); return; }
+      if (!/^(\d{1,3}[A-Za-z]?|counter)$/i.test(aisle)) { $('err').textContent = 'Aisle should be a number like 27' + ($('counterBtn').hidden ? '.' : ', or "counter".'); $('fAisle').focus(); return; }
+      if (bay && !/^\d{1,3}[A-Za-z]?$/.test(bay)) { $('err').textContent = 'Bay should be a number like 4.'; $('fBay').focus(); return; }
+    }
+    if (price) {
+      if (!/^\d{1,5}(\.\d{1,2})?$/.test(price)) { $('err').textContent = 'Price should look like 8.47.'; $('fPrice').focus(); return; }
+      price = Number(price).toFixed(2);
+    }
+    r[A()] = stock === 'n' ? '' : aisle.toLowerCase() === 'counter' ? 'counter' : aisle;
+    r.bay = stock === 'n' ? '' : bay; r.price = price;
+    r[STOCK()] = stock || (aisle ? 'y' : '');
+    r.notes = $('fNotes').value.trim();
+    await persist();
+    next();
+  }
+
+  // ── wiring ─────────────────────────────────────────────────────────────
+  $('openBtn').addEventListener('click', async () => {
+    if ('showOpenFilePicker' in window) {
+      try {
+        const [handle] = await window.showOpenFilePicker({ types: [{ description: 'Checklist', accept: { 'text/csv': ['.csv'] } }] });
+        const file = await handle.getFile();
+        load(file.name, await file.text(), handle);
+      } catch { /* picker closed */ }
+    } else {
+      $('fileInput').click();
+    }
+  });
+  $('fileInput').addEventListener('change', async e => {
+    const f = e.target.files[0]; if (f) load(f.name, await f.text(), null);
+  });
+  $('downloadBtn').addEventListener('click', () => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([toCSV()], { type: 'text/csv' }));
+    a.download = S.name || 'checklist.csv'; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  });
+  $('entry').addEventListener('submit', save);
+  $('skipBtn').addEventListener('click', next);
+  $('backBtn').addEventListener('click', () => { if (S.pos > 0) S.pos--; render(); $('fAisle').focus(); });
+  $('notSoldBtn').addEventListener('click', () => {
+    document.querySelector('input[name=stock][value=n]').checked = true; save();
+  });
+  $('counterBtn').addEventListener('click', () => {
+    $('fAisle').value = 'counter'; $('fBay').value = '';
+    document.querySelector('input[name=stock][value=y]').checked = true; $('fPrice').focus();
+  });
+  $('lookup').addEventListener('click', () => setTimeout(() => $('fAisle').focus(), 0));
+  $('showAll').addEventListener('change', () => buildList(false));
+
+  // Lets the page be tested without a file picker.
+  window.AisleHelper = { load, csv: () => toCSV() };
+})();
+</script>
+</body>
+</html>
