@@ -143,7 +143,7 @@ ${j.checks.map(([name, text]) => `      <li><h3>${esc(name)}</h3><p>${esc(text)}
 
   <section class="card cta">
     <h2>Get the list for your store</h2>
-    <p>Ask Danny turns this job into a one-trip parts list for ${esc(t.stores)}, with aisle numbers and price estimates. Free, and no account needed.</p>
+    <p>Ask Danny turns this job into a one-trip parts list for ${esc(t.stores)}, with price estimates and where to find each part. Free, and no account needed.</p>
     <a class="btn" href="${esc(link)}">Build my parts list</a>
   </section>
 
@@ -192,7 +192,7 @@ function tradePage(t) {
 
   <section class="card cta">
     <h2>Describe the job, get the list</h2>
-    <p>Type what is wrong or add a photo. Ask Danny lists the parts, fittings and tools for ${esc(t.stores)}, with aisle numbers and price estimates. Free, and no account needed.</p>
+    <p>Type what is wrong or add a photo. Ask Danny lists the parts, fittings and tools for ${esc(t.stores)}, with price estimates and where to find each part. Free, and no account needed.</p>
     <a class="btn" href="${esc(link)}">Start a ${esc(inSentence(t))} job</a>
   </section>
 ${jobs.length ? `

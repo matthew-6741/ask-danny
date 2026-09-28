@@ -386,11 +386,10 @@ function formatInventory(rows) {
   const lines = rows.slice(0, 60).map(r => {
     const name  = String(r.name  || '').slice(0, 90);
     const spec  = String(r.spec  || '').slice(0, 60);
-    const aisle = String(r.aisle || '').slice(0, 30);
     const price = r.price != null ? ` | ~$${Number(r.price).toFixed(2)}` : '';
-    return `- ${name}${spec ? ' | ' + spec : ''} | ${aisle}${price}`;
+    return `- ${name}${spec ? ' | ' + spec : ''}${price}`;
   });
-  return `\nVERIFIED STORE INVENTORY (use these first — real aisles and prices):\n${lines.join('\n')}\n`;
+  return `\nSTORE INVENTORY (real product names and prices; use these first):\n${lines.join('\n')}\n`;
 }
 
 // Diagnostic ordering, modelled on the symptom -> likely cause -> verification
@@ -648,7 +647,7 @@ function buildSystemPrompt({ storeKey, trade, city, region, inventoryRows, video
   const ordering = orderingRulesFor(trade);
   const videoBlock = formatVideoEvidence(videoEvidence);
 
-  return `You are a trade materials expert assistant for ${store.name} (aisles ${store.aisles}).
+  return `You are a trade materials expert assistant for ${store.name}.
 ${loc}
 
 The technician's trade category: ${tradeLabel}.
@@ -660,13 +659,13 @@ Rules:
 1. Include EVERY item needed — fasteners, fittings, tape, primer, accessories. Never leave anything out.
 2. Be specific on sizes, grades, and specs. Wrong spec = wasted trip.
 3. ${inventory
-      ? 'Prioritize items from the VERIFIED STORE INVENTORY above — use the exact aisle and price shown. If an item is not in the inventory, add it anyway and mark the name with (*) to flag it as estimated.'
-      : `Use realistic ${store.name} product names and aisle numbers.`}
+      ? 'Prioritize items from the STORE INVENTORY above — use the exact product names and prices shown. If an item is not in the inventory, add it anyway and mark the name with (*) to flag it as estimated.'
+      : `Use realistic ${store.name} product names.`}
 4. Flag any permit, code, or safety concern in NOTES.
 5. Suggest a 10-15% overage on consumables (screws, fasteners, tape, caulk).
 6. List the tools required in the TOOLS section.
 7. If measurements are provided, calculate EXACT quantities and round up to sellable pack sizes.
-8. Never invent an aisle number you are not confident about — write "Ask associate" instead.
+8. Do not give aisle numbers. For each item give the department and section where the store shelves it, for example "Plumbing — toilet repair" or "Electrical — outlets". Aisle numbers come from our own checked store data, never from you.
 9. Order the list so the most likely, cheapest fix comes first, and say in NOTES what to check before buying the expensive items. Selling someone the costly part when a cheap one usually fixes it is the worst thing this tool can do.
 10. Mark each item's confidence honestly: "high" when you are sure the job needs it, "medium" when it depends on what they find, "low" when you are guessing. Guessing and saying so is more useful than sounding certain.
 11. Give STEPS for doing the repair: 3 to 8 short steps in order, one plain sentence each, for someone who has not done it before. Start with making it safe (shut off the water, power or engine), then the cheapest check, then the fix, then how to test it. Use the parts in your list by name. For rule 0 hazards give no steps at all. For work that needs a licensed professional (gas lines, electrical panels or new circuits, structural walls, refrigerant, brakes, airbags), the steps only cover what is safe to check and then say to call a licensed pro; never give instructions for the dangerous part.
@@ -674,7 +673,7 @@ Rules:
 Respond as JSON matching this shape:
 {"notes": "...", "steps": ["Shut off the water at the valve behind the toilet.", "..."],
  "tools": [{"name":"...","why":"..."}],
- "materials": [{"name":"...","spec":"...","qty":"...","aisle":"Aisle 12","price":"~$8.47","confidence":"high"}]}
+ "materials": [{"name":"...","spec":"...","qty":"...","department":"Plumbing — toilet repair","price":"~$8.47","confidence":"high"}]}
 
 If you cannot produce JSON, use this exact text format instead:
 
@@ -690,7 +689,7 @@ TOOLS:
 /TOOLS
 
 MATERIALS:
-- <Item name> | <Exact spec / size / grade> | <Quantity + unit> | Aisle <number> | ~$<price>
+- <Item name> | <Exact spec / size / grade> | <Quantity + unit> | <Department — section> | ~$<price>
 /MATERIALS`;
 }
 
@@ -956,7 +955,8 @@ const LIST_SCHEMA = {
           name:  { type: 'string' },
           spec:  { type: 'string' },
           qty:   { type: 'string' },
-          aisle: { type: 'string' },
+          // Where the store shelves it. The model never gives aisle numbers.
+          department: { type: 'string' },
           price: { type: 'string' },
           // The model states its own certainty rather than the UI inferring it.
           confidence: { type: 'string', enum: ['high', 'medium', 'low'] },
@@ -986,7 +986,7 @@ function normalizeResponse(raw) {
             name:  String(m.name || ''),
             spec:  String(m.spec || ''),
             qty:   String(m.qty || '1'),
-            aisle: cleanAisle(m.aisle),
+            department: cleanDept(m.department),
             price: String(m.price || ''),
             confidence: ['high', 'medium', 'low'].includes(m.confidence) ? m.confidence : 'medium',
           })).filter(m => m.name),
@@ -1017,10 +1017,12 @@ function normalizeResponse(raw) {
 
 // ── Parsing ──────────────────────────────────────────────────────────
 
-function cleanAisle(raw) {
-  const v = String(raw || '').trim();
-  if (!v) return 'Ask associate';
-  return /\d/.test(v) ? v : 'Ask associate';
+// The department a model names ("Plumbing — toilet repair"). An aisle number
+// in this field is dropped: numbers only come from checked store data.
+function cleanDept(raw) {
+  const v = String(raw || '').trim().slice(0, 60);
+  if (!v || /^aisle\b/i.test(v) || /^ask/i.test(v)) return '';
+  return v;
 }
 
 // Steps arrive numbered ("1. Shut off...") or as bullets; keep the sentence.
@@ -1056,7 +1058,7 @@ function parseResponse(text) {
     matsMatch[1].split('\n').map(l => l.trim()).filter(l => l.startsWith('-')).forEach(line => {
       const p = line.replace(/^-\s*/, '').split('|').map(s => s.trim());
       if (p.length >= 4) {
-        items.push({ name: p[0], spec: p[1], qty: p[2], aisle: cleanAisle(p[3]), price: p[4] || '' });
+        items.push({ name: p[0], spec: p[1], qty: p[2], department: cleanDept(p[3]), price: p[4] || '' });
       }
     });
   }
@@ -1148,26 +1150,33 @@ function similarity(a, b) {
   return overlap;
 }
 
+// Aisle numbers users see come only from here: rows of our own store data that
+// someone checked in the store. A model's guess is never shown as a number;
+// unmatched items keep the department the model named instead. A guessed
+// number that sends someone to the wrong aisle costs more trust than
+// "Plumbing — toilet repair".
+function checkedAisles(rows) {
+  const allChecked = !!(PRODUCTS.meta && PRODUCTS.meta.checked);
+  return (rows || [])
+    .filter(p => p.aisle && (allChecked || p.checked))
+    .map(p => ({ name: p.name, aisle: `Aisle ${p.aisle}${p.bay ? `, Bay ${p.bay}` : ''}` }));
+}
+
 function verifyAisles(items, verifiedAisles) {
-  if (!Array.isArray(verifiedAisles) || !verifiedAisles.length) {
-    return items.map(i => ({ ...i, aisleVerified: false }));
-  }
+  const rows = Array.isArray(verifiedAisles) ? verifiedAisles : [];
   return items.map(item => {
     const t = tokenize(item.name);
     let best = null, score = 0;
-    for (const row of verifiedAisles) {
+    for (const row of rows) {
       const s = similarity(t, tokenize(row.name));
       if (s > 0.7 && s > score) { score = s; best = row.aisle; }
     }
-    // Confidence the user sees is not the model's opinion alone. A verified
-    // aisle is a fact from our data; an unverified one is a guess however
-    // certain the model sounded. Report both so the UI can be honest about
-    // which is which rather than presenting one number as though it covered
-    // both the part and its location.
     const stated = item.confidence || 'medium';
+    const { aisle: _modelAisle, ...rest } = item;
     return best
-      ? { ...item, aisle: best, aisleVerified: true,  aisleConfidence: 'verified', itemConfidence: stated }
-      : { ...item, aisleVerified: false, aisleConfidence: 'unverified', itemConfidence: stated };
+      ? { ...rest, aisle: best, aisleVerified: true,  aisleConfidence: 'verified',   itemConfidence: stated }
+      : { ...rest, aisle: '',   aisleVerified: false, aisleConfidence: 'unverified', itemConfidence: stated,
+          department: item.department || '' };
   });
 }
 
@@ -1192,7 +1201,7 @@ HOW TO DECIDE — read carefully:
 - If the drafts disagree on a specification (pipe material, size, voltage, thread type), choose the one that is correct for the job and say why in NOTES. Never split the difference.
 - If a required part is missing from both drafts, add it.
 - If the job description lacks something you need in order to be sure (pipe diameter, model number, dimensions), say so plainly in NOTES rather than guessing silently.
-- Never invent an aisle number you are not confident about. Write "Ask associate" instead.
+- Do not give aisle numbers. Give the department and section where the store shelves each item.
 - Write STEPS for doing the repair: 3 to 8 short steps in order, making it safe first, the cheapest check next, then the fix, then how to test it. Keep the clearest, safest steps from the drafts and make them match your final list. If the job is an immediate hazard (gas smell, carbon monoxide, sparking wiring), give no steps and no materials. For work that needs a licensed professional, the steps only cover what is safe to check, then say to call one.
 
 Reply in EXACTLY this format and nothing else:
@@ -1205,7 +1214,7 @@ TOOLS:
 - <Tool name> | <Why it is needed>
 /TOOLS
 MATERIALS:
-- <Item> | <Spec> | <Qty> | Aisle <n> | ~$<price>
+- <Item> | <Spec> | <Qty> | <Department — section> | ~$<price>
 /MATERIALS`;
 }
 
@@ -1511,10 +1520,7 @@ exports.handler = async (event) => {
   }
 
   // ── Aisle verification always runs last ──
-  const items = verifyAisles(
-    finalParsed.items,
-    serverInventory.map(p => ({ name: p.name, aisle: `Aisle ${p.aisle}` }))
-  );
+  const items = verifyAisles(finalParsed.items, checkedAisles(serverInventory));
 
   return {
     statusCode: 200,
@@ -1540,6 +1546,10 @@ exports.handler = async (event) => {
       limit: rl.max,
       notes: finalParsed.notes,
       steps: finalParsed.steps || [],
+      // Which store the checked aisle numbers belong to, when any are shown.
+      aisleSource: items.some(i => i.aisleVerified)
+        ? { store: (PRODUCTS.meta && PRODUCTS.meta.store) || 'Home Depot', location: (PRODUCTS.meta && PRODUCTS.meta.location) || '' }
+        : null,
       tools: finalParsed.tools,
       items,
       // Structured summary so callers don't re-parse text to learn basics.
@@ -1579,7 +1589,6 @@ exports.draftWith = async function draftWith(agentId, body, { effort, timeoutMs 
     raw = await agent.call(job.system, job.prompt, job.maxTokens, image);
   }
   const parsed = normalizeResponse(raw);
-  const items = verifyAisles(parsed.items,
-    job.serverInventory.map(p => ({ name: p.name, aisle: `Aisle ${p.aisle}` })));
+  const items = verifyAisles(parsed.items, checkedAisles(job.serverInventory));
   return { notes: parsed.notes, steps: parsed.steps || [], tools: parsed.tools, items, ms: Date.now() - started, usage, model };
 };

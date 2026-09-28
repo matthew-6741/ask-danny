@@ -130,16 +130,33 @@ const TINY_JPEG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z
     ok('3c. judge was a third call', d.apiCalls >= 3, `apiCalls=${d.apiCalls}`);
   }
 
-  // 4. verified aisle replacement — server DB must win over the model
+  // 4. Aisle numbers come only from checked store data. With the data marked
+  //    unchecked (the default until someone checks a store), no number is
+  //    shown and the model's department is. Marked checked, the data's aisle
+  //    replaces anything the model said.
   {
-    const m = makeFetch({});
-    const { handler } = load('ai-council.js', m.fetch);
-    const res = await handler(evt({ tier: 'free', prompt: 'refrigerator not cooling dusty coils', store: 'hd', trade: 'appliance' }));
-    const d = JSON.parse(res.body);
-    const brush = (d.items || []).find(i => /coil brush/i.test(i.name));
-    ok('4. verified aisle replaces the model guess', brush && brush.aisleVerified === true && brush.aisle !== 'Aisle 9',
-       brush ? `${brush.aisle} verified=${brush.aisleVerified}` : 'coil brush not in list');
-    ok('4b. client cannot inject verified aisles', true);
+    const products = require(path.join(SRC, 'products.json'));
+    const unchecked = JSON.parse(JSON.stringify(products));
+    unchecked.meta.checked = false;
+    const checked = JSON.parse(JSON.stringify(products));
+    checked.meta.checked = true; checked.meta.location = 'Test Store #1';
+    const job = { tier: 'free', prompt: 'refrigerator not cooling dusty coils', store: 'hd', trade: 'appliance' };
+
+    const a = JSON.parse((await load('ai-council.js', makeFetch({}).fetch, { './products.json': unchecked }).handler(evt(job))).body);
+    ok('4. unchecked data shows no aisle numbers', (a.items || []).length > 0 && a.items.every(i => !i.aisleVerified && !/\d/.test(i.aisle || '')),
+       JSON.stringify((a.items || []).map(i => [i.name, i.aisle])));
+
+    const b = JSON.parse((await load('ai-council.js', makeFetch({}).fetch, { './products.json': checked }).handler(evt(job))).body);
+    const brush = (b.items || []).find(i => /coil brush/i.test(i.name));
+    ok('4b. checked data supplies the aisle, and says which store', brush && brush.aisleVerified === true && /^Aisle \d/.test(brush.aisle)
+       && b.aisleSource && b.aisleSource.location === 'Test Store #1', brush ? `${brush.aisle} ${JSON.stringify(b.aisleSource)}` : 'coil brush not in list');
+
+    const DEPT = JSON.stringify({ notes: '', steps: [], tools: [], materials: [
+      { name: 'Mystery Widget', spec: 'x', qty: '1', department: 'Plumbing — toilet repair', aisle: 'Aisle 99', price: '~$1', confidence: 'low' }] });
+    const c2 = JSON.parse((await load('ai-council.js', makeFetch({ gemini: () => geminiBody(DEPT), groq: () => groqBody(DEPT) }).fetch).handler(evt(job))).body);
+    const w = (c2.items || []).find(i => /widget/i.test(i.name)) || {};
+    ok("4c. a model's aisle number is never shown; its department is", !/\d/.test(w.aisle || '') && w.department === 'Plumbing — toilet repair',
+       JSON.stringify(w));
   }
 
   // 5. rate limit persistence (Blobs unavailable locally -> must fail open, not crash)
@@ -799,7 +816,7 @@ const TINY_JPEG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z
        (lw.items || []).length > 0 && (lw.items || []).every(i => !i.aisleVerified),
        JSON.stringify((lw.items || []).map(i => [i.name, i.aisleVerified])));
     const sent = m.calls.map(c => JSON.stringify(c.body)).join(' ');
-    ok("review: a Lowe's prompt carries no Home Depot inventory", !/VERIFIED STORE INVENTORY/.test(sent));
+    ok("review: a Lowe's prompt carries no Home Depot inventory", !/STORE INVENTORY \(/.test(sent));
   }
   {
     const src = fs.readFileSync(path.join(SRC, 'ai-council.js'), 'utf8');
@@ -876,6 +893,17 @@ const TINY_JPEG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z
          + fs.readFileSync(path.join(__dirname, '..', 'privacy.html'), 'utf8')));
   }
 
+  {
+    // Page: an unchecked part shows its department, never a number.
+    const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+    ok('aisles: the page shows a department when no aisle is checked',
+       /aisle\.className = 'dept-badge';/.test(html) && /if \(item\.aisleVerified && item\.aisle\)/.test(html));
+    ok('aisles: "Wrong aisle?" only appears on a checked aisle', /if \(item\.aisleVerified\) body\.appendChild\(flag\);/.test(html));
+    ok('aisles: the page no longer labels guesses "unverified"', !/Aisle unverified — confirm in store/.test(html));
+    const products = JSON.parse(fs.readFileSync(path.join(SRC, 'products.json'), 'utf8'));
+    ok('aisles: product data says whether it was checked, and where', 'checked' in products.meta && 'location' in products.meta);
+  }
+
   // Claude, through the official SDK. Paid tier only; the eval compares it
   // with the free council through draftWith. Responses are mocked here.
   {
@@ -906,7 +934,7 @@ const TINY_JPEG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z
     ok('claude: opts into default refusal fallbacks',
        req.body.fallbacks === 'default' && /server-side-fallback-2026-07-01/.test(req.headers.get('anthropic-beta') || ''),
        `${req.body.fallbacks} / ${req.headers.get('anthropic-beta')}`);
-    ok('claude: uses the same system prompt the council uses', /VERIFIED STORE INVENTORY/.test(JSON.stringify(req.body.system || '')));
+    ok('claude: uses the same system prompt the council uses', /STORE INVENTORY \(/.test(JSON.stringify(req.body.system || '')));
 
     reply = { id: 'msg_2', type: 'message', role: 'assistant', model: 'claude-opus-5',
       stop_reason: 'refusal', stop_details: { type: 'refusal', category: null, explanation: null },

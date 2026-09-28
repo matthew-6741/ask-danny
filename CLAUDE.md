@@ -138,7 +138,7 @@ it clears 4.5:1. Every text colour on the site passes WCAG AA.
 
 The site has been linked to GitHub (`matthew-6741/ask-danny`, branch `main`)
 since 2026-09-16. **Pushing to `main` deploys to production.** Netlify runs
-`scripts/build.js`, which runs `eval/local-check.js` (144 checks) and fails the
+`scripts/build.js`, which runs `eval/local-check.js` (149 checks) and fails the
 build if any fail. It then copies an explicit allowlist of 11 site files into
 `dist/`, which is what gets published. Functions deploy from
 `netlify/functions/`.
@@ -183,3 +183,16 @@ netlify api restoreSiteDeploy --data "{\"site_id\":\"$SITE\",\"deploy_id\":\"$DE
 After deploying, verify: the site says "Ask Danny",
 `/netlify/functions/ai-council.js` and `/package.json` return 404,
 `/api/council` returns items, and the Blobs diag above reports `ok`.
+
+## Aisle numbers: checked only
+
+Users see an aisle number only when it comes from store data someone checked in
+that store: `products.json` `meta.checked` is true, or a row has its own
+`checked` date. `meta.location` names the store, and the page shows "Aisle
+checked at Home Depot, Wilshire/Union #1048". Everything else shows the
+department the model names ("Plumbing — toilet repair"). The model is told
+never to give aisle numbers, and one that slips through is dropped. The data
+was marked unchecked on 2026-09-27 because nobody knew where its numbers came
+from, so until a store checklist in `store-data/` is imported, every part
+shows a department. The target is 75-80% of shown aisle numbers correct at
+that store.

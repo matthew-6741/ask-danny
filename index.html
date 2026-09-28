@@ -45,7 +45,7 @@
 <title>Ask Danny: AI Parts Lists for Home and Auto Repairs</title>
 
 <!-- ── Primary SEO ── -->
-<meta name="description" content="Describe a plumbing, HVAC, carpentry, appliance or car problem, or add a photo or video. Ask Danny gives you the steps to fix it and a free one-trip parts list with aisle numbers for Home Depot, Lowe's and AutoZone.">
+<meta name="description" content="Describe a plumbing, HVAC, carpentry, appliance or car problem, or add a photo or video. Ask Danny gives you the steps to fix it and a free one-trip parts list with where to find each part at Home Depot, Lowe's and AutoZone.">
 <meta name="author" content="Matthew John Sanchez">
 <meta name="robots" content="index, follow">
 <meta name="theme-color" content="#faf8f5">
@@ -55,7 +55,7 @@
 <meta property="og:type"        content="website">
 <meta property="og:url"         content="https://ask-danny-ai.com/">
 <meta property="og:title"       content="Ask Danny: AI Parts Lists for Home and Auto Repairs">
-<meta property="og:description" content="Describe what's broken or snap a photo and get a one-trip parts list with aisle numbers for Home Depot, Lowe's and AutoZone. Free.">
+<meta property="og:description" content="Describe what's broken or snap a photo and get the steps to fix it and a one-trip parts list with prices and where to find each part at Home Depot, Lowe's and AutoZone. Free.">
 <meta property="og:image"       content="https://ask-danny-ai.com/og-image.png">
 <meta property="og:site_name"   content="Ask Danny">
 <meta name="application-name" content="Ask Danny">
@@ -66,7 +66,7 @@
 <meta name="twitter:card"        content="summary_large_image">
 <meta name="twitter:url"         content="https://ask-danny-ai.com/">
 <meta name="twitter:title"       content="Ask Danny: AI Parts Lists for Home and Auto Repairs">
-<meta name="twitter:description" content="Snap a photo of a repair problem and get a one-trip parts list with aisle numbers for Home Depot, Lowe's or AutoZone. Built by USC student Matthew Sanchez.">
+<meta name="twitter:description" content="Snap a photo of a repair problem and get the steps to fix it and a one-trip parts list for Home Depot, Lowe's or AutoZone. Built by USC student Matthew Sanchez.">
 <meta name="twitter:image"       content="https://ask-danny-ai.com/og-image.png">
 <meta name="twitter:creator"     content="@MatthewSanchez">
 
@@ -156,7 +156,7 @@
   "keywords": "AI parts list, repair parts list, home repair, blue collar AI, tradesperson tool, contractor material list, Home Depot aisle finder, Lowe's aisle finder, AutoZone parts list, plumbing parts, HVAC parts, appliance parts",
   "featureList": [
     "One-trip material lists from job details and photos",
-    "Estimated aisle numbers for Home Depot, Lowe's and AutoZone",
+    "Where to find each part: checked aisle numbers where available, the department everywhere else",
     "Geolocation-aware results",
     "Voice input via Web Speech API",
     "Job history saved on your device",
@@ -1108,6 +1108,13 @@ textarea::placeholder { color: var(--placeholder); }
   color: var(--text);
   white-space: nowrap;
 }
+.dept-badge {
+  font-size: 12px;
+  color: var(--muted);
+  text-align: right;
+  max-width: 170px;
+  line-height: 1.35;
+}
 .aisle-badge {
   font-size: 12px;
   font-weight: 500;
@@ -1604,7 +1611,7 @@ strong, b { font-weight: 500; }
     <section class="lp-hero" aria-labelledby="lpTitle">
       <p class="lp-eyebrow">Free AI parts lists for home and auto repairs</p>
       <h1 id="lpTitle">Describe what's broken. Get every part in one trip.</h1>
-      <p class="lp-lede">Ask Danny turns a repair problem, a photo or a short video into the steps to fix it and a parts list with aisle numbers and prices for Home Depot, Lowe's and AutoZone. Built for homeowners and the trades. No account needed.</p>
+      <p class="lp-lede">Ask Danny turns a repair problem, a photo or a short video into the steps to fix it and a parts list with prices and where to find each part at Home Depot, Lowe's and AutoZone. Built for homeowners and the trades. No account needed.</p>
 
       <form class="lp-ask" action="/" method="get" data-act-submit="submitLanding">
         <label class="sr-only" for="lpJob">What needs fixing?</label>
@@ -1642,7 +1649,7 @@ strong, b { font-weight: 500; }
       <ol class="lp-steps">
         <li><strong>Describe the job</strong><span>Type what's wrong, say it out loud, or add a photo or video.</span></li>
         <li><strong>Pick your store</strong><span>Home Depot, Lowe's or AutoZone, or compare Home Depot and Lowe's side by side.</span></li>
-        <li><strong>Get the list</strong><span>The steps to fix it, plus parts, specs and quantities with aisle numbers and a cost estimate.</span></li>
+        <li><strong>Get the list</strong><span>The steps to fix it, plus parts, specs and quantities, where to find each one, and a cost estimate.</span></li>
       </ol>
     </section>
 
@@ -1671,8 +1678,8 @@ strong, b { font-weight: 500; }
           <p>Home Depot and Lowe's for home repairs, and AutoZone for car parts.</p>
         </details>
         <details>
-          <summary>Are the aisle numbers exact?</summary>
-          <p>No. They are estimates. Store layouts differ and change after remodels, and prices will not match your receipt exactly. Items that were not matched to our product database are marked with an asterisk.</p>
+          <summary>Are the aisle numbers right?</summary>
+          <p>We only show an aisle number once someone has checked it in that store. Everywhere else you get the department and section, such as "Plumbing — toilet repair", because layouts differ from store to store and change after remodels. Prices are estimates and won't match your receipt exactly. Parts not matched to our product database are marked with an asterisk.</p>
         </details>
         <details>
           <summary>Does it tell me how to do the repair?</summary>
@@ -2025,7 +2032,7 @@ strong, b { font-weight: 500; }
       <div class="loading-step active" id="step1"><svg class="ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0116 0z"/><circle cx="12" cy="10" r="3"/></svg> Reading your location</div>
       <div class="loading-step"        id="step2">Analysing the job</div>
       <div class="loading-step"        id="step3"><svg class="ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg> Selecting exact materials</div>
-      <div class="loading-step"        id="step4"><svg class="ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 6v16l7-4 8 4 7-4V2l-7 4-8-4-7 4z"/><path d="M8 2v16"/><path d="M16 6v16"/></svg> Mapping aisle numbers</div>
+      <div class="loading-step"        id="step4"><svg class="ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 6v16l7-4 8 4 7-4V2l-7 4-8-4-7 4z"/><path d="M8 2v16"/><path d="M16 6v16"/></svg> Finding where each part is shelved</div>
     </div>
   </div>
 
@@ -3175,6 +3182,14 @@ function cleanAisle(raw) {
   return /\d/.test(val) ? val : 'Ask associate';
 }
 
+// Column 4 of a text answer is the department ("Plumbing — toilet repair").
+// Models no longer give aisle numbers; if one slips through it is dropped,
+// because numbers only come from checked store data on the server.
+function cleanDept(raw) {
+  const val = String(raw || '').trim().slice(0, 60);
+  return !val || /^aisle\b/i.test(val) || /^ask/i.test(val) ? '' : val;
+}
+
 function parseResponse(text) {
   const notesMatch = text.match(/NOTES:\s*(.+?)(?=\nSTEPS:|\nTOOLS:|\nMATERIALS:|$)/s);
   const notes = notesMatch ? notesMatch[1].trim() : '';
@@ -3209,7 +3224,8 @@ function parseResponse(text) {
           name:  parts[0],
           spec:  parts[1],
           qty:   parts[2],
-          aisle: cleanAisle(parts[3]),
+          aisle: '',
+          department: cleanDept(parts[3]),
           price: parts[4] || '',
         });
       }
@@ -3321,14 +3337,13 @@ function renderResults({ notes, steps, tools, items }, storeKey) {
     body.appendChild(name);
     body.appendChild(spec);
 
-    // Council mode: the aisle badge says whether it came from verified data.
-    if (lastCouncil && lastCouncil.judged) {
+    // A checked aisle says where it was checked. Unchecked parts show a
+    // department instead of a number, so there is nothing to caveat.
+    if (item.aisleVerified) {
       const src = document.createElement('div');
-      const verified = item.aisleVerified;
-      src.className = 'agree-badge ' + (verified ? 'strong' : 'weak');
-      setText(src, verified
-        ? 'Aisle from verified inventory'
-        : 'Aisle unverified — confirm in store');
+      src.className = 'agree-badge strong';
+      const where = lastCouncil && lastCouncil.aisleSource && lastCouncil.aisleSource.location;
+      setText(src, where ? `Aisle checked at ${lastCouncil.aisleSource.store}, ${where}` : 'Aisle checked in store');
       body.appendChild(src);
     } else if (item.votes && item.totalProviders > 1) {
       // Legacy vote display (older /api/consensus responses)
@@ -3355,7 +3370,7 @@ function renderResults({ notes, steps, tools, items }, storeKey) {
     flag.textContent = 'Wrong aisle?';
     flag.title = 'Tell us this aisle was wrong';
     flag.onclick = e => { e.stopPropagation(); reportWrongAisle(item, flag); };
-    body.appendChild(flag);
+    if (item.aisleVerified) body.appendChild(flag);
 
     const meta  = document.createElement('div');
     meta.className = 'item-meta';
@@ -3363,10 +3378,17 @@ function renderResults({ notes, steps, tools, items }, storeKey) {
     qty.className = 'qty-badge';
     setText(qty, item.qty);
     const aisle = document.createElement('div');
-    aisle.className = 'aisle-badge';
-    aisle.style.background = store.color + '18';
-    aisle.style.color      = store.text;
-    setText(aisle, item.aisle);
+    if (item.aisleVerified && item.aisle) {
+      aisle.className = 'aisle-badge';
+      aisle.style.background = store.color + '18';
+      aisle.style.color      = store.text;
+      setText(aisle, item.aisle);
+    } else {
+      // No checked aisle for this store: say where it is shelved rather
+      // than show a guessed number.
+      aisle.className = 'dept-badge';
+      setText(aisle, item.department || 'Ask an associate');
+    }
     const price = document.createElement('div');
     price.className = 'price-est';
     setText(price, item.price);
@@ -3910,7 +3932,7 @@ function copyList() {
     const name  = row.querySelector('.material-name')?.textContent  || '';
     const spec  = row.querySelector('.material-spec')?.textContent   || '';
     const qty   = row.querySelector('.qty-badge')?.textContent   || '';
-    const aisle = row.querySelector('.aisle-badge')?.textContent  || '';
+    const aisle = row.querySelector('.aisle-badge, .dept-badge')?.textContent  || '';
     const price = row.querySelector('.price-est')?.textContent   || '';
     lines.push(`${i + 1}. ${name} — ${spec} | ${qty} | ${aisle} | ${price}`);
   });

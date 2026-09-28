@@ -1,7 +1,9 @@
 {
   "meta": {
     "store": "Home Depot",
-    "note": "Edit aisle/bay numbers to match your local store. Prices are approximate.",
+    "location": "",
+    "checked": false,
+    "note": "Aisle numbers are shown to users only when \"checked\" is true, or when a row has its own \"checked\" date. Set it only after the aisles were confirmed in a real store, and put that store in \"location\" (e.g. \"Wilshire/Union #1048, Los Angeles\"). Until then users see the department instead. Prices are approximate.",
     "updated": "2026-09"
   },
   "plumbing": [
@@ -91,7 +93,7 @@
       ]
     },
     {
-      "name": "PVC Elbow 90\u00b0",
+      "name": "PVC Elbow 90°",
       "spec": "1-1/2 in.",
       "aisle": "27",
       "bay": "3",
@@ -878,7 +880,7 @@
     },
     {
       "name": "Non-Contact Voltage Tester",
-      "spec": "12V\u20131000V AC",
+      "spec": "12V–1000V AC",
       "aisle": "16",
       "bay": "1",
       "price": 18.97,
