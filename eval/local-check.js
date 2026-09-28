@@ -786,7 +786,8 @@ const TINY_JPEG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z
     const res = await handler(evt({ tier: 'free', prompt: 'I smell gas near the water heater', store: 'hd', trade: 'plumbing' }));
     const d = JSON.parse(res.body);
     ok('review: a safety refusal wins when the judge fails',
-       res.statusCode === 200 && d.judged !== true && (d.items || []).length === 0 && /gas/i.test(d.notes || ''),
+       res.statusCode === 200 && d.judged !== true && (d.items || []).length === 0 && /gas/i.test(d.notes || '')
+         && (d.steps || []).length === 0,
        `status ${res.statusCode} judged=${d.judged} items=${(d.items || []).length} notes=${String(d.notes).slice(0, 60)}`);
   }
   {
@@ -829,6 +830,50 @@ const TINY_JPEG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z
        /e\.rateLimited = true/.test(html) && /councilErr\.rateLimited/.test(html) && !/\/limit\|quota\/i\.test\(councilErr/.test(html));
     ok('review: compare mode keeps a safety notice instead of erroring',
        /const notice = \[compareData\.hd, compareData\.lw\]\.find/.test(html));
+  }
+
+  // Repair steps: every answer says how to fix it, except a hazard.
+  {
+    const WITH_STEPS = JSON.stringify({
+      notes: 'Check the flapper first.',
+      steps: ['1. Shut off the water at the valve behind the toilet.', 'Flush to empty the tank.', '- Swap the flapper.'],
+      tools: [], materials: [{ name: 'Toilet Flapper', spec: '2 in.', qty: '1', aisle: 'Aisle 27', price: '~$5', confidence: 'high' }],
+    });
+    // Drafts carry steps; the judge answers without them, as an older judge
+    // prompt would. The final answer must still have steps.
+    let n = 0;
+    const plan = {
+      gemini: () => (++n <= 1 ? geminiBody(WITH_STEPS) : geminiBody(GOOD_JSON)),
+      groq:   () => (++n <= 2 ? groqBody(WITH_STEPS)  : groqBody(GOOD_JSON)),
+    };
+    const m = makeFetch(plan);
+    const { handler } = load('ai-council.js', m.fetch);
+    const d = JSON.parse((await handler(evt({ tier: 'free', prompt: 'my toilet keeps running', store: 'hd', trade: 'plumbing' }))).body);
+    ok('steps: the answer includes repair steps', Array.isArray(d.steps) && d.steps.length === 3, JSON.stringify(d.steps));
+    ok('steps: numbering and bullets are stripped', (d.steps || []).every(s => !/^\s*(\d+[.)]|-)/.test(s)), JSON.stringify(d.steps));
+
+    // Text format, from a model that ignores JSON mode.
+    const TEXT = 'NOTES: Shut off power first.\nSTEPS:\n1. Unplug the dryer.\n2. Clear the vent.\n/STEPS\nTOOLS:\n- Screwdriver | panel\n/TOOLS\nMATERIALS:\n- Dryer Vent Kit | 4 in. | 1 | Aisle 30 | ~$15\n/MATERIALS';
+    const t = makeFetch({ gemini: () => geminiBody(TEXT), groq: () => groqBody(TEXT) });
+    const tr = JSON.parse((await load('ai-council.js', t.fetch).handler(evt({ tier: 'free', prompt: 'dryer takes forever', store: 'hd', trade: 'appliance' }))).body);
+    ok('steps: read from the text format too', (tr.steps || []).length === 2 && !/STEPS/.test(tr.notes || ''),
+       `steps=${JSON.stringify(tr.steps)} notes=${tr.notes}`);
+
+    const src = fs.readFileSync(path.join(SRC, 'ai-council.js'), 'utf8');
+    ok('steps: the prompt forbids steps for hazards', /For rule 0 hazards give no steps/.test(src));
+    ok('steps: the proxy prompt asks for steps too',
+       /STEPS:/.test(fs.readFileSync(path.join(SRC, 'ai-proxy.js'), 'utf8')));
+
+    const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+    ok('steps: the page renders a How to fix it section',
+       /id="stepsBlock"/.test(html) && /function renderResults\(\{ notes, steps, tools, items \}/.test(html));
+    ok('steps: the page parses STEPS from text answers', /const stepsMatch = text\.match\(\/STEPS:/.test(html));
+    const keys = [...html.matchAll(/diagnostech_ai_ack_v(\d+)/g)].map(x => x[1]);
+    ok('steps: one acknowledgement version everywhere, bumped for the new wording',
+       keys.length >= 2 && keys.every(k => k === keys[0]) && Number(keys[0]) >= 4, keys.join(','));
+    ok('steps: no page still says it does not give repair steps',
+       !/not how to do the job|not repair instructions/i.test(html + fs.readFileSync(path.join(__dirname, '..', 'terms.html'), 'utf8')
+         + fs.readFileSync(path.join(__dirname, '..', 'privacy.html'), 'utf8')));
   }
 
   // Claude, through the official SDK. Paid tier only; the eval compares it

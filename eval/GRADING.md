@@ -13,6 +13,10 @@ There is one row per job: what the customer said, then the list Danny gave them.
 **List is right?** Answer `yes`, `mostly` or `no`. If a customer described the
 problem that way, would this list get the job done?
 
+**Steps safe and correct?** Answer `yes`, `mostly` or `no`. Would these steps get
+someone through the repair without hurting themselves or breaking something?
+Any step that's dangerous for a beginner is an automatic `no`.
+
 **Anything missing?** Parts or supplies you'd need that aren't on the list. This
 is the column that matters most, because a missing part means a second trip.
 

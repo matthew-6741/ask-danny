@@ -653,7 +653,7 @@ ${loc}
 
 The technician's trade category: ${tradeLabel}.
 ${inventory}${ordering}${videoBlock}
-Your ONLY job is to produce a complete, precise material list so the technician can complete this job in ONE trip with ZERO return visits.
+Your job is to produce a complete, precise material list so the job gets done in ONE trip with ZERO return visits, plus short steps for doing the repair.
 
 Rules:
 0. STOP FIRST if the description involves immediate danger: a smell of gas, a suspected gas leak, carbon monoxide, sparking or burning smell from wiring, or standing water near live electricity. In those cases return NO materials at all — an empty list — and use NOTES to say to leave the area and call the gas utility, the fire department, or an emergency electrician. Do not sell tape, sealant, joint compound, leak detector or any other part to someone who is describing a live hazard. A short list of nothing plus the right instruction is the correct answer.
@@ -669,14 +669,21 @@ Rules:
 8. Never invent an aisle number you are not confident about — write "Ask associate" instead.
 9. Order the list so the most likely, cheapest fix comes first, and say in NOTES what to check before buying the expensive items. Selling someone the costly part when a cheap one usually fixes it is the worst thing this tool can do.
 10. Mark each item's confidence honestly: "high" when you are sure the job needs it, "medium" when it depends on what they find, "low" when you are guessing. Guessing and saying so is more useful than sounding certain.
+11. Give STEPS for doing the repair: 3 to 8 short steps in order, one plain sentence each, for someone who has not done it before. Start with making it safe (shut off the water, power or engine), then the cheapest check, then the fix, then how to test it. Use the parts in your list by name. For rule 0 hazards give no steps at all. For work that needs a licensed professional (gas lines, electrical panels or new circuits, structural walls, refrigerant, brakes, airbags), the steps only cover what is safe to check and then say to call a licensed pro; never give instructions for the dangerous part.
 
 Respond as JSON matching this shape:
-{"notes": "...", "tools": [{"name":"...","why":"..."}],
+{"notes": "...", "steps": ["Shut off the water at the valve behind the toilet.", "..."],
+ "tools": [{"name":"...","why":"..."}],
  "materials": [{"name":"...","spec":"...","qty":"...","aisle":"Aisle 12","price":"~$8.47","confidence":"high"}]}
 
 If you cannot produce JSON, use this exact text format instead:
 
 NOTES: <one or two sentences about code/permit/safety concerns, or "None.">
+
+STEPS:
+1. <first step>
+2. <next step>
+/STEPS
 
 TOOLS:
 - <Tool name> | <Why it's needed / spec>
@@ -931,6 +938,8 @@ const LIST_SCHEMA = {
   type: 'object',
   properties: {
     notes: { type: 'string' },
+    // How to do the repair, in order. Empty for hazards (rule 0).
+    steps: { type: 'array', items: { type: 'string' } },
     tools: {
       type: 'array',
       items: {
@@ -971,6 +980,7 @@ function normalizeResponse(raw) {
       if (Array.isArray(j.materials)) {
         return {
           notes: String(j.notes || ''),
+          steps: cleanSteps(j.steps),
           tools: (j.tools || []).map(t => ({ name: String(t.name || ''), why: String(t.why || '') })).filter(t => t.name),
           items: j.materials.map(m => ({
             name:  String(m.name || ''),
@@ -997,10 +1007,10 @@ function normalizeResponse(raw) {
   // raw fragment as though it were advice is worse than reporting a failure.
   const looksLikeBrokenJson = candidate.startsWith('{');
   if (!parsed.items.length && !parsed.notes && text.length > 40 && !looksLikeBrokenJson) {
-    return { notes: text.slice(0, 600), tools: [], items: [], format: 'prose' };
+    return { notes: text.slice(0, 600), steps: [], tools: [], items: [], format: 'prose' };
   }
   if (looksLikeBrokenJson && !parsed.items.length) {
-    return { notes: '', tools: [], items: [], format: 'truncated' };
+    return { notes: '', steps: [], tools: [], items: [], format: 'truncated' };
   }
   return { ...parsed, format: 'text' };
 }
@@ -1013,9 +1023,23 @@ function cleanAisle(raw) {
   return /\d/.test(v) ? v : 'Ask associate';
 }
 
+// Steps arrive numbered ("1. Shut off...") or as bullets; keep the sentence.
+// Capped so a runaway model cannot bury the parts list.
+function cleanSteps(list) {
+  return (Array.isArray(list) ? list : [])
+    .map(s => String(s || '').replace(/^\s*(?:\d+[.)]|[-*•])\s*/, '').trim())
+    .filter(Boolean)
+    .slice(0, 10);
+}
+
 function parseResponse(text) {
-  const notesMatch = text.match(/NOTES:\s*(.+?)(?=\nTOOLS:|\nMATERIALS:|$)/s);
+  const notesMatch = text.match(/NOTES:\s*(.+?)(?=\nSTEPS:|\nTOOLS:|\nMATERIALS:|$)/s);
   const notes = notesMatch ? notesMatch[1].trim() : '';
+
+  const stepsMatch = text.match(/STEPS:\s*([\s\S]+?)(?:\/STEPS|(?=\nTOOLS:)|(?=\nMATERIALS:)|$)/);
+  const steps = stepsMatch
+    ? cleanSteps(stepsMatch[1].split('\n').filter(l => /^\s*(?:\d+[.)]|[-*•])/.test(l)))
+    : [];
 
   const toolsMatch = text.match(/TOOLS:\s*([\s\S]+?)(?:\/TOOLS|(?=\nMATERIALS:)|$)/);
   const tools = [];
@@ -1036,7 +1060,7 @@ function parseResponse(text) {
       }
     });
   }
-  return { notes, tools, items };
+  return { notes, steps, tools, items };
 }
 
 // ── Aisle verification (models never decide this) ────────────────────
@@ -1169,10 +1193,14 @@ HOW TO DECIDE — read carefully:
 - If a required part is missing from both drafts, add it.
 - If the job description lacks something you need in order to be sure (pipe diameter, model number, dimensions), say so plainly in NOTES rather than guessing silently.
 - Never invent an aisle number you are not confident about. Write "Ask associate" instead.
+- Write STEPS for doing the repair: 3 to 8 short steps in order, making it safe first, the cheapest check next, then the fix, then how to test it. Keep the clearest, safest steps from the drafts and make them match your final list. If the job is an immediate hazard (gas smell, carbon monoxide, sparking wiring), give no steps and no materials. For work that needs a licensed professional, the steps only cover what is safe to check, then say to call one.
 
 Reply in EXACTLY this format and nothing else:
 
 NOTES: <one or two sentences: key decisions, disagreements you resolved, and anything the user must confirm>
+STEPS:
+1. <step>
+/STEPS
 TOOLS:
 - <Tool name> | <Why it is needed>
 /TOOLS
@@ -1450,7 +1478,7 @@ exports.handler = async (event) => {
   // the judge was skipped or failed.
   const stop = !judged && drafts.find(d => isSafetyStop(d.parsed));
   if (stop) {
-    finalParsed = { notes: stop.parsed.notes, tools: [], items: [] };
+    finalParsed = { notes: stop.parsed.notes, steps: [], tools: [], items: [] };
   } else if (!judged && drafts.length > 1) {
     const merged = [];
     drafts.forEach(d => {
@@ -1470,9 +1498,16 @@ exports.handler = async (event) => {
     merged.sort((a, b) => b.votes - a.votes);
     finalParsed = {
       notes: drafts.map(d => d.parsed.notes).find(Boolean) || '',
+      steps: drafts.map(d => d.parsed.steps).find(st => st && st.length) || [],
       tools: finalParsed.tools,
       items: merged,
     };
+  }
+
+  if (isSafetyStop(finalParsed)) {
+    finalParsed.steps = [];
+  } else if (!(finalParsed.steps || []).length) {
+    finalParsed.steps = drafts.map(d => d.parsed.steps).find(st => st && st.length) || [];
   }
 
   // ── Aisle verification always runs last ──
@@ -1504,6 +1539,7 @@ exports.handler = async (event) => {
       remaining: rl.remaining,
       limit: rl.max,
       notes: finalParsed.notes,
+      steps: finalParsed.steps || [],
       tools: finalParsed.tools,
       items,
       // Structured summary so callers don't re-parse text to learn basics.
@@ -1545,5 +1581,5 @@ exports.draftWith = async function draftWith(agentId, body, { effort, timeoutMs 
   const parsed = normalizeResponse(raw);
   const items = verifyAisles(parsed.items,
     job.serverInventory.map(p => ({ name: p.name, aisle: `Aisle ${p.aisle}` })));
-  return { notes: parsed.notes, tools: parsed.tools, items, ms: Date.now() - started, usage, model };
+  return { notes: parsed.notes, steps: parsed.steps || [], tools: parsed.tools, items, ms: Date.now() - started, usage, model };
 };

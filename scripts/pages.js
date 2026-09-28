@@ -21,8 +21,8 @@ const CONTACT = 'matthewsanchez00024@gmail.com';
 // The rest of the site, with the date each page last changed.
 const STATIC_PAGES = [
   { loc: '/', lastmod: UPDATED, priority: '1.0' },
-  { loc: '/privacy.html', lastmod: '2026-07-06', priority: '0.3' },
-  { loc: '/terms.html', lastmod: '2026-08-31', priority: '0.3' },
+  { loc: '/privacy.html', lastmod: '2026-09-27', priority: '0.3' },
+  { loc: '/terms.html', lastmod: '2026-09-27', priority: '0.3' },
   { loc: '/cookies.html', lastmod: '2026-09-06', priority: '0.3' },
 ];
 

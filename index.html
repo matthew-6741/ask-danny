@@ -45,7 +45,7 @@
 <title>Ask Danny: AI Parts Lists for Home and Auto Repairs</title>
 
 <!-- ── Primary SEO ── -->
-<meta name="description" content="Describe a plumbing, HVAC, carpentry, appliance or car problem, or add a photo or video. Ask Danny builds a free one-trip parts list with aisle numbers for Home Depot, Lowe's and AutoZone.">
+<meta name="description" content="Describe a plumbing, HVAC, carpentry, appliance or car problem, or add a photo or video. Ask Danny gives you the steps to fix it and a free one-trip parts list with aisle numbers for Home Depot, Lowe's and AutoZone.">
 <meta name="author" content="Matthew John Sanchez">
 <meta name="robots" content="index, follow">
 <meta name="theme-color" content="#faf8f5">
@@ -1003,6 +1003,13 @@ textarea::placeholder { color: var(--placeholder); }
 }
 .notes-label { font-weight: 500; margin-bottom: 3px; }
 
+/* How to fix it */
+.steps-block { padding: 12px 18px; border-bottom: 1px solid var(--border); }
+.steps-header { font-size: 14px; font-weight: 500; color: var(--text); margin-bottom: 8px; }
+.steps-list { margin: 0 0 8px 20px; font-size: 14px; line-height: 1.5; color: var(--text); }
+.steps-list li { margin-bottom: 6px; padding-left: 2px; }
+.steps-note { font-size: 12px; color: var(--muted); margin: 0; line-height: 1.5; }
+
 /* Tools block */
 .tools-block { border-bottom: 1px solid var(--border); }
 .tools-header {
@@ -1573,7 +1580,7 @@ strong, b { font-weight: 500; }
   // decided before first paint so the landing page never flashes. The key must
   // match AI_ACK_KEY in the main script.
   try {
-    if (localStorage.getItem('diagnostech_ai_ack_v3') === 'yes' || /[?&](job|trade)=/.test(location.search)) {
+    if (localStorage.getItem('diagnostech_ai_ack_v4') === 'yes' || /[?&](job|trade)=/.test(location.search)) {
       document.documentElement.classList.add('skip-landing');
     }
   } catch (e) { /* storage blocked: show the landing page */ }
@@ -1597,7 +1604,7 @@ strong, b { font-weight: 500; }
     <section class="lp-hero" aria-labelledby="lpTitle">
       <p class="lp-eyebrow">Free AI parts lists for home and auto repairs</p>
       <h1 id="lpTitle">Describe what's broken. Get every part in one trip.</h1>
-      <p class="lp-lede">Ask Danny turns a repair problem, a photo or a short video into a parts list with aisle numbers for Home Depot, Lowe's and AutoZone. Built for homeowners and the trades. No account needed.</p>
+      <p class="lp-lede">Ask Danny turns a repair problem, a photo or a short video into the steps to fix it and a parts list with aisle numbers and prices for Home Depot, Lowe's and AutoZone. Built for homeowners and the trades. No account needed.</p>
 
       <form class="lp-ask" action="/" method="get" data-act-submit="submitLanding">
         <label class="sr-only" for="lpJob">What needs fixing?</label>
@@ -1635,7 +1642,7 @@ strong, b { font-weight: 500; }
       <ol class="lp-steps">
         <li><strong>Describe the job</strong><span>Type what's wrong, say it out loud, or add a photo or video.</span></li>
         <li><strong>Pick your store</strong><span>Home Depot, Lowe's or AutoZone, or compare Home Depot and Lowe's side by side.</span></li>
-        <li><strong>Get the list</strong><span>Parts, specs and quantities with aisle numbers and price estimates, plus the tools and what to check first.</span></li>
+        <li><strong>Get the list</strong><span>The steps to fix it, plus parts, specs and quantities with aisle numbers and a cost estimate.</span></li>
       </ol>
     </section>
 
@@ -1669,7 +1676,7 @@ strong, b { font-weight: 500; }
         </details>
         <details>
           <summary>Does it tell me how to do the repair?</summary>
-          <p>It tells you what to buy and what to check first, not how to do the job. For gas, electrical, structural or permitted work, hire a licensed professional.</p>
+          <p>Yes, for common repairs: short steps in order, starting with the cheapest fix. They're general guidance, so follow the instructions for your model. For gas, electrical, structural or permitted work, it tells you to hire a licensed professional instead.</p>
         </details>
         <details>
           <summary>What happens to what I type?</summary>
@@ -1789,7 +1796,7 @@ strong, b { font-weight: 500; }
       <li><strong>Aisle numbers are estimates.</strong> Layouts differ by store and change after remodels.</li>
       <li><strong>Prices are approximate</strong> and won't match your receipt exactly.</li>
       <li><strong>Items can be missed or invented.</strong> Anything marked (*) wasn't matched to our verified product database.</li>
-      <li><strong>This tells you what to buy, not how to do the job.</strong> For gas, electrical, structural, or permitted work, consult a licensed professional.</li>
+      <li><strong>Repair steps are general guidance.</strong> Follow the instructions for your model. For gas, electrical, structural, or permitted work, hire a licensed professional.</li>
     </ul>
 
     <h3 class="ack-sub">What gets collected</h3>
@@ -2068,6 +2075,13 @@ strong, b { font-weight: 500; }
       <div id="notesText"></div>
     </div>
 
+    <!-- How to fix it -->
+    <div class="steps-block" id="stepsBlock" style="display:none">
+      <div class="steps-header">How to fix it</div>
+      <ol class="steps-list" id="stepsList"></ol>
+      <p class="steps-note">General guidance. Follow the instructions for your model, and hire a licensed professional for gas, electrical, structural or permitted work.</p>
+    </div>
+
     <!-- Tool checklist -->
     <div class="tools-block" id="toolsBlock" style="display:none">
       <div class="tools-header">Tools you'll need</div>
@@ -2317,7 +2331,9 @@ async function init() {
 // v3: the acknowledgement now includes an age statement. Bumping the key
 // makes existing users re-consent instead of being treated as having agreed
 // to wording that did not exist when they clicked.
-const AI_ACK_KEY = 'diagnostech_ai_ack_v3';
+// v4: answers now include repair steps, and the acknowledgement says so.
+// The pre-paint check at the top of <body> must use the same key.
+const AI_ACK_KEY = 'diagnostech_ai_ack_v4';
 
 function hasAcknowledgedAI() {
   try { return localStorage.getItem(AI_ACK_KEY) === 'yes'; } catch { return false; }
@@ -3160,8 +3176,14 @@ function cleanAisle(raw) {
 }
 
 function parseResponse(text) {
-  const notesMatch = text.match(/NOTES:\s*(.+?)(?=\nTOOLS:|\nMATERIALS:|$)/s);
+  const notesMatch = text.match(/NOTES:\s*(.+?)(?=\nSTEPS:|\nTOOLS:|\nMATERIALS:|$)/s);
   const notes = notesMatch ? notesMatch[1].trim() : '';
+
+  const stepsMatch = text.match(/STEPS:\s*([\s\S]+?)(?:\/STEPS|(?=\nTOOLS:)|(?=\nMATERIALS:)|$)/);
+  const steps = stepsMatch
+    ? stepsMatch[1].split('\n').map(l => l.trim()).filter(l => /^(?:\d+[.)]|[-*•])/.test(l))
+        .map(l => l.replace(/^(?:\d+[.)]|[-*•])\s*/, '')).filter(Boolean).slice(0, 10)
+    : [];
 
   // Closing markers are optional — a smaller local model may omit them, and a
   // response cut off by max_tokens never emits them. Falling back to the next
@@ -3194,7 +3216,7 @@ function parseResponse(text) {
     }
   }
 
-  return { notes, tools, items };
+  return { notes, steps, tools, items };
 }
 
 // ── XSS-safe text setter ──
@@ -3216,8 +3238,19 @@ function calcTotal(items) {
 }
 
 // ── Render results ──
-function renderResults({ notes, tools, items }, storeKey) {
+function renderResults({ notes, steps, tools, items }, storeKey) {
   const store = STORES[storeKey || currentStore];
+
+  // How to fix it. None for a hazard: the notice is the whole answer.
+  const sb = document.getElementById('stepsBlock');
+  const sl = document.getElementById('stepsList');
+  sl.textContent = '';
+  (steps || []).forEach(step => {
+    const li = document.createElement('li');
+    setText(li, step);
+    sl.appendChild(li);
+  });
+  sb.style.display = (steps || []).length ? 'block' : 'none';
 
   // Notes
   const nb = document.getElementById('notesBlock');
@@ -3867,6 +3900,12 @@ function copyList() {
   const store    = STORES[storeKey];
   const rows     = document.querySelectorAll('.material-item');
   const lines    = [`${store.name} — Material List\n`];
+  const stepEls  = document.querySelectorAll('#stepsList li');
+  if (stepEls.length && document.getElementById('stepsBlock').style.display !== 'none') {
+    lines.push('How to fix it:');
+    stepEls.forEach((li, i) => lines.push(`${i + 1}. ${li.textContent}`));
+    lines.push('\nParts:');
+  }
   rows.forEach((row, i) => {
     const name  = row.querySelector('.material-name')?.textContent  || '';
     const spec  = row.querySelector('.material-spec')?.textContent   || '';
