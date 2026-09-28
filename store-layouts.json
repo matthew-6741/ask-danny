@@ -1,0 +1,103 @@
+{
+  "meta": {
+    "source": "Google Maps indoor floor plans, read by hand from Matthew's screenshots on 2026-09-27. Departments and their neighbours only. There are no aisle numbers in this file on purpose.",
+    "rows": "Front row = the racks nearest the checkouts. Back row = the racks along the back wall. Left and right are as you face into the store from the checkouts.",
+    "maxKm": 2.5,
+    "updated": "2026-09-27"
+  },
+  "stores": [
+    {
+      "id": "hd-wilshire-union",
+      "chain": "hd",
+      "name": "Home Depot, Wilshire/Union",
+      "lat": 34.0572, "lon": -118.2707,
+      "departments": {
+        "plumbing":   ["Front row: Plumbing and Bath, between Paint and Tools and Hardware", "Back row: Plumbing, Kitchen and Bath, between Kitchen Showroom and Trim and Moulding"],
+        "electrical": ["Front row, left side: between Lawn Equipment and Chemicals and Flooring"],
+        "lighting":   ["Back row, left side: Lighting and Ceiling Fans, between Storage and Flooring"],
+        "paint":      ["Front row: between Flooring and Plumbing and Bath"],
+        "tools":      ["Front row, right side: Tools and Hardware, next to Plumbing and Bath"],
+        "hardware":   ["Front row, right side: Tools and Hardware, next to Plumbing and Bath"],
+        "lumber":     ["Back row, far right: Lumber and Building Materials"],
+        "doors":      ["Back row: Trim and Moulding, Doors and Windows, between Plumbing and Lumber"],
+        "flooring":   ["Front row: between Electrical and Paint", "Back row: between Lighting and Window Treatments"],
+        "appliances": ["Back row: in front of Window Treatments, next to Kitchen Showroom"],
+        "kitchen":    ["Back row: Kitchen Showroom, between Design Place and Plumbing"],
+        "windowTreatments": ["Back row, against the back wall behind Design Place"],
+        "storage":    ["Back row, left side: between Lawn Equipment and Lighting"],
+        "garden":     ["Left side: Lawn Equipment and Chemicals at the front-left, Lawn Equipment at the back-left"]
+      }
+    },
+    {
+      "id": "hd-ladera-heights",
+      "chain": "hd",
+      "name": "Home Depot, Ladera Heights",
+      "lat": 33.9889, "lon": -118.3644,
+      "departments": {
+        "plumbing":   ["Back row: between Appliances and Doors and Windows"],
+        "electrical": ["Front row, left side: between Lawn Equipment and Chemicals and Lightbulbs", "Back row, far left: Electrical, Lighting and Ceiling Fans"],
+        "lighting":   ["Back row, far left: Electrical, Lighting and Ceiling Fans"],
+        "lightbulbs": ["Front row: a narrow rack between Electrical and Paint"],
+        "paint":      ["Front row: just right of Lightbulbs"],
+        "tools":      ["Front row, right side: Tools and Hardware, next to Lumber and Building Materials"],
+        "hardware":   ["Front row, right side: Tools and Hardware, next to Lumber and Building Materials"],
+        "lumber":     ["Far right, front and back rows: Lumber and Building Materials"],
+        "doors":      ["Back row: Doors and Windows, between Plumbing and Lumber", "Millwork: front row, at the back end of Tools and Hardware"],
+        "flooring":   ["Back row: Flooring and Storage, between Electrical and Window Treatments"],
+        "appliances": ["Back row: between Kitchen Showroom and Plumbing"],
+        "kitchen":    ["Back row: Kitchen Showroom, between Window Treatments and Appliances"],
+        "windowTreatments": ["Back row: between Flooring and Storage and Kitchen Showroom"],
+        "storage":    ["Back row: Flooring and Storage, between Electrical and Window Treatments"],
+        "garden":     ["Garden Center along the left wall; Lawn Equipment and Chemicals at the front-left"]
+      }
+    },
+    {
+      "id": "hd-westchester-lmu",
+      "chain": "hd",
+      "name": "Home Depot near LMU (Coral Tree Pl)",
+      "lat": 33.9767, "lon": -118.4241,
+      "departments": {
+        "plumbing":   ["Front row: Plumbing, Kitchen and Bath, between Lightbulbs and Paint"],
+        "electrical": ["Front row, left side: between Lawn Equipment and Chemicals and Lightbulbs", "Back row, far left: Electrical, Lighting and Ceiling Fans"],
+        "lighting":   ["Back row, far left: Electrical, Lighting and Ceiling Fans"],
+        "lightbulbs": ["Front row: a narrow rack between Electrical and Plumbing"],
+        "paint":      ["Front row: between Plumbing and Flooring"],
+        "tools":      ["Front row: Tool Corral, between Flooring and Hardware"],
+        "hardware":   ["Front row: between Tool Corral and Lumber"],
+        "lumber":     ["Far right, front and back rows: Lumber and Building Materials"],
+        "doors":      ["Back row: Trim and Moulding, Doors and Windows, between Flooring and Storage and Lumber"],
+        "flooring":   ["Front row: between Paint and Tool Corral", "Back row: Flooring and Storage, next to Design Place"],
+        "appliances": ["Back row: in front of Kitchen Showroom, next to Electrical, Lighting and Ceiling Fans"],
+        "kitchen":    ["Back row: Kitchen Showroom, behind Appliances"],
+        "windowTreatments": ["Back row, against the back wall behind Design Place"],
+        "storage":    ["Back row: Flooring and Storage, between Design Place and Trim and Moulding"],
+        "garden":     ["Garden Center outside on the left; Lawn Equipment and Chemicals at the front-left"]
+      }
+    },
+    {
+      "id": "hd-inglewood",
+      "chain": "hd",
+      "name": "Home Depot, Inglewood",
+      "lat": 33.9484, "lon": -118.3305,
+      "departments": {
+        "plumbing":   ["Front row: between Bath and Tools", "Back row: between Appliances and Windows, with Kitchen and Plumbing against the back wall behind Appliances"],
+        "electrical": ["Front row, left side: between Light Bulbs and Flooring"],
+        "lighting":   ["Back row, far left"],
+        "lightbulbs": ["Front row, left side: between Cleaning Supplies and Electrical"],
+        "paint":      ["Front row: between Flooring and Bath, Paint Desk at the front end"],
+        "tools":      ["Front row: between Plumbing and Hardware"],
+        "hardware":   ["Front row: between Tools and Hardware and Ladders", "Back row: between Trim and Moulding and Lumber"],
+        "ladders":    ["Front row: Hardware and Ladders, between Hardware and Lumber"],
+        "lumber":     ["Right side, front and back rows: Lumber, then Building Materials along the right"],
+        "doors":      ["Back row: Windows, Doors, and Trim and Moulding, between Plumbing and Hardware"],
+        "flooring":   ["Front row: between Electrical and Paint", "Back row: between Storage and Window Treatments"],
+        "appliances": ["Back row: between Kitchen Showroom and Plumbing"],
+        "kitchen":    ["Back row: Kitchen Showroom, between Design Place and Appliances"],
+        "windowTreatments": ["Back row, against the back wall behind Design Place"],
+        "storage":    ["Back row, left side: between Lighting and Flooring"],
+        "cleaning":   ["Front row, left side: between Lawn Equipment and Chemicals and Light Bulbs"],
+        "garden":     ["Front row, far left: Lawn Equipment and Chemicals"]
+      }
+    }
+  ]
+}
