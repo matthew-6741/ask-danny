@@ -138,8 +138,8 @@ it clears 4.5:1. Every text colour on the site passes WCAG AA.
 
 The site has been linked to GitHub (`matthew-6741/ask-danny`, branch `main`)
 since 2026-09-16. **Pushing to `main` deploys to production.** Netlify runs
-`scripts/build.js`, which runs `eval/local-check.js` (149 checks) and fails the
-build if any fail. It then copies an explicit allowlist of 11 site files into
+`scripts/build.js`, which runs `eval/local-check.js` (160 checks) and fails the
+build if any fail. It then copies an explicit allowlist of 12 site files into
 `dist/`, which is what gets published. Functions deploy from
 `netlify/functions/`.
 
@@ -196,3 +196,19 @@ was marked unchecked on 2026-09-27 because nobody knew where its numbers came
 from, so until a store checklist in `store-data/` is imported, every part
 shows a department. The target is 75-80% of shown aisle numbers correct at
 that store.
+
+## Store layouts (where each department is)
+
+`store-layouts.json` records where departments sit in four LA Home Depots
+(Wilshire/Union, Ladera Heights, near LMU on Coral Tree Pl, Inglewood), read by
+hand from Google Maps indoor floor plans on 2026-09-27. Rows and neighbours
+only, never aisle numbers. When someone asks for a Home Depot list, the browser
+asks for location once; the nearest mapped store within `meta.maxKm` (2.5 km)
+is saved on the device as `diagnostech_store_v1` (store id only, never
+coordinates), and results show "Where to find it at <store>" for each
+department on the list. Further out, nothing is shown, because their nearest
+Home Depot is probably one without a plan. The matching functions sit between
+`/* layout-fns:start */` and `/* layout-fns:end */` in index.html, and
+`eval/local-check.js` runs those exact functions. Adding a store: add it to the
+JSON and bump `LAYOUT_VERSION`, which also re-asks people who were too far from
+every store before.

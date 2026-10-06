@@ -980,6 +980,66 @@ const TINY_JPEG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z
     }
   }
 
+  // Store layouts: where departments sit in four LA Home Depots. The page's
+  // own matching functions are run here, not copies of them.
+  {
+    const vm = require('vm');
+    const ROOT_DIR = path.join(__dirname, '..');
+    const layouts = JSON.parse(fs.readFileSync(path.join(ROOT_DIR, 'store-layouts.json'), 'utf8'));
+    const html = fs.readFileSync(path.join(ROOT_DIR, 'index.html'), 'utf8');
+    const fnSrc = (html.match(/\/\* layout-fns:start \*\/([\s\S]*?)\/\* layout-fns:end \*\//) || [])[1] || '';
+    const ctx = vm.createContext({});
+    let fns = {};
+    try {
+      vm.runInContext(fnSrc + '\nthis.fns = { layoutKey, nearestLayout, whereLines, DEPT_PATTERNS };', ctx);
+      fns = ctx.fns;
+    } catch (e) { ok('layouts: the page\'s layout functions load', false, e.message); }
+    const { layoutKey, nearestLayout, whereLines, DEPT_PATTERNS } = fns;
+    const known = new Set((DEPT_PATTERNS || []).map(p => p[0]));
+    const stores = layouts.stores || [];
+
+    ok('layouts: four stores, each with a name, coordinates and departments',
+       stores.length === 4 && stores.every(s => s.id && s.name && s.chain === 'hd'
+         && Number.isFinite(s.lat) && Number.isFinite(s.lon) && Object.keys(s.departments || {}).length >= 10));
+    ok('layouts: every department has at least one location line',
+       stores.every(s => Object.values(s.departments).every(v => Array.isArray(v) && v.length && v.every(t => typeof t === 'string' && t.length > 5))));
+    ok('layouts: every department key is one the page can match',
+       stores.every(s => Object.keys(s.departments).every(k => known.has(k))),
+       stores.flatMap(s => Object.keys(s.departments)).filter(k => !known.has(k)).join(','));
+    ok('layouts: no aisle numbers in the floor-plan data', !/\baisle\s*\d/i.test(JSON.stringify(layouts)));
+
+    if (layoutKey) {
+      const cases = [
+        ['Plumbing — toilet repair', 'plumbing'], ['Kitchen & Bath — faucets', 'plumbing'],
+        ['Window Treatments — blinds', 'windowTreatments'], ['Doors & Windows — weatherstrip', 'doors'],
+        ['Light Bulbs', 'lightbulbs'], ['Lighting & Ceiling Fans — fan parts', 'lighting'],
+        ['Electrical — wire', 'electrical'], ['Tools & Hardware — fasteners', 'tools'],
+        ['Hardware - anchors', 'hardware'], ['Lumber & Building Materials', 'lumber'],
+        ['Heating & Cooling — air filters', ''], ['Automotive — tools', ''], ['', ''],
+      ];
+      const wrong = cases.filter(([d, k]) => layoutKey(d) !== k).map(([d, k]) => `${d} → ${layoutKey(d)} (want ${k})`);
+      ok('layouts: model departments map to the right store department', !wrong.length, wrong.join('; '));
+      ok('layouts: someone near the Inglewood store gets that store',
+         (nearestLayout(layouts, 33.9490, -118.3300) || {}).id === 'hd-inglewood');
+      ok('layouts: someone far from every mapped store gets none',
+         nearestLayout(layouts, 34.1500, -118.2500) === null);   // Glendale
+      const ingl = stores.find(s => s.id === 'hd-inglewood');
+      const lines = whereLines(ingl, [
+        { department: 'Plumbing — toilet repair' }, { department: 'Plumbing — supply lines' },
+        { department: 'Heating & Cooling — filters' }, { department: 'Paint — caulk' },
+      ]);
+      ok('layouts: one line per department, unmapped departments left out',
+         lines.length === 2 && lines[0].dept === 'Plumbing' && lines[1].dept === 'Paint', JSON.stringify(lines));
+    }
+
+    const build = fs.readFileSync(path.join(ROOT_DIR, 'scripts', 'build.js'), 'utf8');
+    ok('layouts: the file is published with the site', /'store-layouts\.json'/.test(build));
+    ok('layouts: only a store id is saved, never coordinates',
+       /saveStore\(s \? \{ id: s\.id \} : \{ id: '', far: true \}\)/.test(html)
+         && !/setItem\([^)]*(lat|lon|coords)/.test(html));
+    ok('layouts: only Home Depot lists show a layout', /storeKey === 'hd' && saved && saved\.id/.test(html));
+  }
+
   console.log('─────────────────────────────────────────────');
   console.log(`  ${pass} passed, ${fail} failed`);
   if (failures.length) {

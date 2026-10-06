@@ -2095,6 +2095,13 @@ strong, b { font-weight: 500; }
       <div class="tool-list" id="toolList"></div>
     </div>
 
+    <!-- Where each department is, at the user's nearest mapped store -->
+    <div class="steps-block" id="whereBlock" style="display:none">
+      <div class="steps-header" id="whereHeader">Where to find it</div>
+      <ul class="steps-list" id="whereList"></ul>
+      <p class="steps-note">From the store's floor plan. Front row means the shelves nearest the checkouts, and left and right are as you face into the store from the checkouts.</p>
+    </div>
+
     <div class="material-list" id="materialList"></div>
 
     <div class="results-footer">
@@ -2311,7 +2318,7 @@ async function init() {
   window.addEventListener('online',  () => showOfflineBanner(false));
   window.addEventListener('offline', () => showOfflineBanner(true));
   applyJobLink();
-  await loadProducts();
+  await Promise.all([loadProducts(), loadLayouts()]);
 
   if (fbAuth) {
     fbAuth.onAuthStateChanged(user => {
@@ -2542,6 +2549,154 @@ async function loadProducts() {
   } catch {
     console.warn('[Ask Danny] products.json not found — AI will estimate products');
   }
+}
+
+// ── Store layouts ──
+// Where each department sits in four LA Home Depots, read from their floor
+// plans (store-layouts.json). No aisle numbers: it says which row a
+// department is in and what it is next to. The browser asks for location
+// once, the first time someone asks for a Home Depot list; after that only the
+// nearest mapped store's id is kept, on this device. Coordinates are never
+// stored or sent anywhere by this.
+const LAYOUT_VERSION = '2026-09-27';
+const MY_STORE_KEY   = 'diagnostech_store_v1';
+let STORE_LAYOUTS = null;
+let lastWhere     = null; // the list on screen, redrawn once the store is known
+
+async function loadLayouts() {
+  try {
+    const res = await fetch(`store-layouts.json?v=${LAYOUT_VERSION}`);
+    STORE_LAYOUTS = await res.json();
+  } catch { STORE_LAYOUTS = null; }
+}
+
+/* layout-fns:start */
+// Departments arrive as "Plumbing — toilet repair". Only the part before the
+// dash is matched, and the first pattern wins, so narrower names come first:
+// "window treatments" before "windows", "light bulbs" before "lighting".
+const DEPT_PATTERNS = [
+  ['windowTreatments', /\b(window treatments?|blinds|shades)\b/],
+  ['lightbulbs', /\b(light ?bulbs?|bulbs?)\b/],
+  ['lighting',   /\b(lighting|ceiling fans?|light fixtures?)\b/],
+  ['electrical', /\belectrical\b/],
+  ['plumbing',   /\b(plumbing|bath|toilets?|faucets?|water heaters?)\b/],
+  ['paint',      /\bpaint\b/],
+  ['ladders',    /\bladders?\b/],
+  ['tools',      /\btools?\b/],
+  ['hardware',   /\b(hardware|fasteners?)\b/],
+  ['lumber',     /\b(lumber|building materials|drywall|concrete)\b/],
+  ['doors',      /\b(doors?|windows?|millwork|mouldings?|moldings?|trim)\b/],
+  ['flooring',   /\b(flooring|tile)\b/],
+  ['appliances', /\bappliances?\b/],
+  ['kitchen',    /\bkitchen\b/],
+  ['storage',    /\b(storage|organization)\b/],
+  ['cleaning',   /\bcleaning\b/],
+  ['garden',     /\b(garden|lawn|irrigation|sprinklers?)\b/],
+];
+
+function deptHead(department) {
+  return String(department || '').split(/\s*[—–:,]\s*|\s+-\s+/)[0].trim();
+}
+
+function layoutKey(department) {
+  const head = deptHead(department).toLowerCase();
+  if (!head) return '';
+  for (const [key, re] of DEPT_PATTERNS) if (re.test(head)) return key;
+  return '';
+}
+
+function distanceKm(aLat, aLon, bLat, bLon) {
+  const r = Math.PI / 180;
+  const dLat = (bLat - aLat) * r, dLon = (bLon - aLon) * r;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(aLat * r) * Math.cos(bLat * r) * Math.sin(dLon / 2) ** 2;
+  return 12742 * Math.asin(Math.sqrt(h));
+}
+
+// The nearest mapped store, but only if it is close enough to be the user's
+// own store. Further out, their nearest Home Depot is probably one we have no
+// plan for, and another store's layout would be worse than none.
+function nearestLayout(layouts, lat, lon) {
+  if (!layouts || !Array.isArray(layouts.stores)) return null;
+  const maxKm = (layouts.meta && layouts.meta.maxKm) || 2.5;
+  let best = null, bestKm = Infinity;
+  for (const s of layouts.stores) {
+    const km = distanceKm(lat, lon, s.lat, s.lon);
+    if (km < bestKm) { best = s; bestKm = km; }
+  }
+  return bestKm <= maxKm ? best : null;
+}
+
+// One line per department on the list, in list order, each said once.
+function whereLines(layout, items) {
+  const seen = new Set(), lines = [];
+  for (const item of items || []) {
+    const key = layoutKey(item.department);
+    if (!key || seen.has(key) || !layout.departments[key]) continue;
+    seen.add(key);
+    lines.push({ dept: deptHead(item.department), where: layout.departments[key] });
+  }
+  return lines;
+}
+/* layout-fns:end */
+
+function savedStore() {
+  try { return JSON.parse(localStorage.getItem(MY_STORE_KEY) || 'null'); } catch { return null; }
+}
+
+function saveStore(rec) {
+  try { localStorage.setItem(MY_STORE_KEY, JSON.stringify({ ...rec, v: LAYOUT_VERSION })); } catch {}
+}
+
+function rememberNearestStore(lat, lon) {
+  if (!STORE_LAYOUTS) return;
+  const s = nearestLayout(STORE_LAYOUTS, lat, lon);
+  saveStore(s ? { id: s.id } : { id: '', far: true });
+  if (lastWhere) renderWhere(lastWhere.items, lastWhere.storeKey);
+}
+
+// Called when a Home Depot list is requested, without waiting on it. Once the
+// browser has permission the store is re-checked silently, in case they
+// moved. Without it, they are asked once: never again after a yes (the saved
+// store is used) or a no. Someone far from every mapped store is asked again
+// only when the layout file adds stores.
+async function locateStore() {
+  if (!STORE_LAYOUTS || !navigator.geolocation) return;
+  const saved = savedStore();
+  let state = '';
+  try { state = (await navigator.permissions.query({ name: 'geolocation' })).state; } catch {}
+  if (state === 'denied') return;
+  if (state !== 'granted' && saved) {
+    if (saved.id || saved.declined) return;
+    if (saved.far && saved.v === LAYOUT_VERSION) return;
+  }
+  navigator.geolocation.getCurrentPosition(
+    pos => rememberNearestStore(pos.coords.latitude, pos.coords.longitude),
+    err => { if (err.code === 1) saveStore({ id: '', declined: true }); },
+    { timeout: 10000, maximumAge: 30 * 60 * 1000 }
+  );
+}
+
+function renderWhere(items, storeKey) {
+  lastWhere = { items, storeKey };
+  const block = document.getElementById('whereBlock');
+  const saved = savedStore();
+  const layout = storeKey === 'hd' && saved && saved.id && STORE_LAYOUTS
+    && STORE_LAYOUTS.stores.find(s => s.id === saved.id);
+  const lines = layout ? whereLines(layout, items) : [];
+  if (!lines.length) { block.style.display = 'none'; return; }
+  setText(document.getElementById('whereHeader'), `Where to find it at ${layout.name}`);
+  const list = document.getElementById('whereList');
+  list.textContent = '';
+  for (const line of lines) {
+    const li = document.createElement('li');
+    const dept = document.createElement('span');
+    dept.style.fontWeight = '500';
+    setText(dept, line.dept);
+    li.appendChild(dept);
+    li.appendChild(document.createTextNode(' — ' + line.where.join('; ')));
+    list.appendChild(li);
+  }
+  block.style.display = 'block';
 }
 
 function countProducts() {
@@ -3113,6 +3268,7 @@ async function requestLocation() {
   navigator.geolocation.getCurrentPosition(
     async pos => {
       const { latitude: lat, longitude: lon } = pos.coords;
+      rememberNearestStore(lat, lon);
       try {
         const res  = await fetch(
           `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`
@@ -3402,6 +3558,8 @@ function renderResults({ notes, steps, tools, items }, storeKey) {
     list.appendChild(row);
   });
 
+  renderWhere(items, storeKey);
+
   // Total
   setText(document.getElementById('totalEst'), calcTotal(items));
 }
@@ -3421,6 +3579,7 @@ function startCompare() {
     return;
   }
   compareMode = true;
+  locateStore();
   runCompare(prompt);
 }
 
@@ -3701,6 +3860,7 @@ async function submitJob() {
   }
 
   compareMode = false;
+  if (currentStore === 'hd') locateStore();
   document.getElementById('compareTabs').style.display    = 'none';
   document.getElementById('compareSummary').style.display = 'none';
   document.getElementById('inputCard').style.display      = 'none';
@@ -3926,8 +4086,13 @@ function copyList() {
   if (stepEls.length && document.getElementById('stepsBlock').style.display !== 'none') {
     lines.push('How to fix it:');
     stepEls.forEach((li, i) => lines.push(`${i + 1}. ${li.textContent}`));
-    lines.push('\nParts:');
   }
+  const whereEls = document.querySelectorAll('#whereList li');
+  if (whereEls.length && document.getElementById('whereBlock').style.display !== 'none') {
+    lines.push(`${document.getElementById('whereHeader').textContent}:`);
+    whereEls.forEach(li => lines.push(`- ${li.textContent}`));
+  }
+  if (lines.length > 1) lines.push('\nParts:');
   rows.forEach((row, i) => {
     const name  = row.querySelector('.material-name')?.textContent  || '';
     const spec  = row.querySelector('.material-spec')?.textContent   || '';

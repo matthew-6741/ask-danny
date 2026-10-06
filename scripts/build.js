@@ -25,7 +25,7 @@ const out = path.join(root, 'dist');
 const PUBLISH = [
   'index.html', '404.html', 'cookies.html', 'login.html',
   'privacy.html', 'terms.html', 'thanks.html',
-  'og-image.png', 'products.json', 'robots.txt',
+  'og-image.png', 'products.json', 'store-layouts.json', 'robots.txt',
   // Search Console ownership of https://ask-danny-ai.com/. Google re-checks it,
   // and the Change of Address from diagnostechai.com depends on it, so leave it.
   'googledc447d9f1b9de20b.html',
