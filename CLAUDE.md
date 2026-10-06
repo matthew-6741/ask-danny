@@ -138,7 +138,7 @@ it clears 4.5:1. Every text colour on the site passes WCAG AA.
 
 The site has been linked to GitHub (`matthew-6741/ask-danny`, branch `main`)
 since 2026-09-16. **Pushing to `main` deploys to production.** Netlify runs
-`scripts/build.js`, which runs `eval/local-check.js` (178 checks) and fails the
+`scripts/build.js`, which runs `eval/local-check.js` (197 checks) and fails the
 build if any fail. It then copies an explicit allowlist of 12 site files into
 `dist/`, which is what gets published. Functions deploy from
 `netlify/functions/`.
@@ -231,3 +231,24 @@ files (plus `store-data/`). So: edit, run `node eval/local-check.js`, push, and 
 change is live in about five minutes for 0 credits. GitHub's raw files are cached
 for five minutes. The deployed fallback copies catch up at the next real deploy.
 A data push that also touches code still builds, as it should.
+
+## Update list: confirmation and key rotation
+
+Sign-ups start as `pending` and get one email (via Resend) with a link to
+`/api/confirm`. The link opens a page with a button; only the button's POST
+confirms, because mail security scanners open every link. Links work once, for
+14 days, and an address gets at most one confirmation email an hour. Broadcasts
+mail `subscribed` records only, and a real broadcast refuses to send without
+`MAIL_POSTAL` (CAN-SPAM needs a postal address in every marketing email).
+Sign-ups taken before sending was set up stay pending; the admin action
+`{"action":"send-confirmations","dryRun":false}` (POST `/api/subscribers` with
+the admin token) mails their links once `RESEND_API_KEY` and `MAIL_FROM` exist.
+
+`LIST_KEY` rotation never reads a secret back out of Netlify. The newest of
+`LIST_KEY`, `LIST_KEY_2`, `LIST_KEY_3`... encrypts, and every one still set can
+decrypt. To rotate: set the next one, deploy, POST `{"action":"rekey"}` to
+`/api/subscribers`, check `unreadable` is 0, then unset the old variable. Env
+changes only reach the functions with the next deploy, so set new variables
+before the push that ships them. `ADMIN_TOKEN` rotates by setting a new value;
+generate it locally so its owner can store it, since a `--secret` value cannot be
+read back.

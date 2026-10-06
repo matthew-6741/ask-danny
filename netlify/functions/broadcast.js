@@ -14,30 +14,46 @@
  *   RESEND_API_KEY   required to actually send (https://resend.com, free tier)
  *   MAIL_FROM        e.g. "Ask Danny <updates@ask-danny-ai.com>"
  *                    The domain must be verified with the provider first.
+ *   MAIL_POSTAL      a postal address for the footer, e.g. a P.O. box. US law
+ *                    (CAN-SPAM) requires one in every marketing email, so a
+ *                    real send refuses to go without it.
+ *
+ * Only confirmed subscribers are mailed; "pending" sign-ups are skipped until
+ * they click the link in their confirmation email (updates.js).
  */
 
 const crypto = require('crypto');
 const { getStore, setEnvironmentContext } = require('@netlify/blobs');
 
 // Addresses are stored encrypted when LIST_KEY is set; see updates.js, which
-// writes them. Without the key this returns null and that subscriber is
-// skipped rather than mailed blind.
+// writes them and explains rotation (LIST_KEY, LIST_KEY_2, ...). Every key
+// still set is tried. With none that fits, this returns null and that
+// subscriber is skipped rather than mailed blind.
+function listKeys() {
+  const out = [];
+  for (const [name, raw] of Object.entries(process.env)) {
+    const m = /^LIST_KEY(?:_([0-9]{1,3}))?$/.exec(name);
+    if (!m || !raw) continue;
+    const key = Buffer.from(raw, 'base64');
+    if (key.length === 32) out.push({ id: m[1] ? Number(m[1]) : 1, key });
+  }
+  return out.sort((a, b) => b.id - a.id);
+}
+
 function readEmail(rec) {
   if (!rec) return null;
   if (rec.email) return rec.email;
   if (!rec.emailEnc) return null;
-  const raw = process.env.LIST_KEY;
-  if (!raw) return null;
-  const key = Buffer.from(raw, 'base64');
-  if (key.length !== 32) return null;
-  try {
-    const buf = Buffer.from(rec.emailEnc, 'base64');
-    const decipher = crypto.createDecipheriv('aes-256-gcm', key, buf.subarray(0, 12));
-    decipher.setAuthTag(buf.subarray(12, 28));
-    return Buffer.concat([decipher.update(buf.subarray(28)), decipher.final()]).toString('utf8');
-  } catch {
-    return null;
+  const keys = listKeys().sort((a, b) => (b.id === rec.keyId) - (a.id === rec.keyId));
+  for (const { key } of keys) {
+    try {
+      const buf = Buffer.from(rec.emailEnc, 'base64');
+      const decipher = crypto.createDecipheriv('aes-256-gcm', key, buf.subarray(0, 12));
+      decipher.setAuthTag(buf.subarray(12, 28));
+      return Buffer.concat([decipher.update(buf.subarray(28)), decipher.final()]).toString('utf8');
+    } catch { /* not this key */ }
   }
+  return null;
 }
 
 // Installs the Blobs environment the event carries. Copied from ai-council.js,
@@ -74,7 +90,7 @@ function escapeHtml(s) {
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
-function render(bodyText, unsubUrl) {
+function render(bodyText, unsubUrl, postal) {
   const paras = String(bodyText).split(/\n{2,}/).map(p =>
     `<p style="margin:0 0 16px;line-height:1.6">${escapeHtml(p.trim()).replace(/\n/g, '<br>')}</p>`
   ).join('');
@@ -89,24 +105,25 @@ border-radius:16px;padding:32px">
   <p style="margin:0;font-size:12px;color:#72706b;line-height:1.5">
     You are getting this because you signed up for Ask Danny updates at
     <a href="${SITE}" style="color:#72706b">ask-danny-ai.com</a>.<br>
-    <a href="${unsubUrl}" style="color:#72706b">Unsubscribe</a> — one click, takes effect immediately.
+    <a href="${unsubUrl}" style="color:#72706b">Unsubscribe</a> — one click, takes effect immediately.<br>
+    Ask Danny · ${escapeHtml(postal)}
   </p>
 </div></body></html>`;
 }
 
-function plain(bodyText, unsubUrl) {
+function plain(bodyText, unsubUrl, postal) {
   return `${bodyText}\n\n---\nYou are getting this because you signed up for Ask Danny `
-    + `updates at ${SITE}.\nUnsubscribe: ${unsubUrl}\n`;
+    + `updates at ${SITE}.\nUnsubscribe: ${unsubUrl}\nAsk Danny · ${postal}\n`;
 }
 
-async function sendOne(apiKey, from, to, subject, bodyText, unsubUrl) {
+async function sendOne(apiKey, from, to, subject, bodyText, unsubUrl, postal) {
   const res = await fetch(RESEND_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
     body: JSON.stringify({
       from, to: [to], subject,
-      html: render(bodyText, unsubUrl),
-      text: plain(bodyText, unsubUrl),
+      html: render(bodyText, unsubUrl, postal),
+      text: plain(bodyText, unsubUrl, postal),
       // Lets mail clients show their own unsubscribe button and honour a
       // one-click POST. Without these, updates land in spam far more often.
       headers: {
@@ -184,12 +201,20 @@ exports.handler = async (event) => {
       hint: 'Create a key at resend.com and verify the sending domain, then set both as Netlify environment variables.',
     });
   }
+  const postal = String(process.env.MAIL_POSTAL || '').trim();
+  if (!postal) {
+    return json(503, {
+      error: 'Add a postal address before sending.',
+      needs: ['MAIL_POSTAL'],
+      hint: 'US law (CAN-SPAM) requires a postal address in every marketing email. A P.O. box works.',
+    });
+  }
 
   const sent = [], failed = [];
   for (const r of targets) {
     const unsubUrl = `${SITE}/api/unsubscribe?t=${encodeURIComponent(r.unsubToken)}`;
     try {
-      await sendOne(apiKey, from, r.email, subject, text, unsubUrl);
+      await sendOne(apiKey, from, r.email, subject, text, unsubUrl, postal);
       sent.push(r.email);
     } catch (e) {
       // Keep going. One bad address must not stop the rest of the list.

@@ -660,10 +660,11 @@ const TINY_JPEG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z
 
     process.env.RESEND_API_KEY = 're_test';
     process.env.MAIL_FROM = 'Ask Danny <updates@ask-danny-ai.com>';
+    process.env.MAIL_POSTAL = 'PO Box 1, Los Angeles, CA 90001';
     const real = await handler(post({ subject: 'Hello', body: 'Update.', dryRun: false }, 'test-admin-token-value'));
     ok('broadcast: sends to the one active subscriber', JSON.parse(real.body).sent === 1 && sends === 1);
     ok('broadcast: never mails someone who unsubscribed', sends === 1);
-    delete process.env.ADMIN_TOKEN; delete process.env.RESEND_API_KEY; delete process.env.MAIL_FROM;
+    delete process.env.ADMIN_TOKEN; delete process.env.RESEND_API_KEY; delete process.env.MAIL_FROM; delete process.env.MAIL_POSTAL;
   }
 
 
@@ -1100,6 +1101,140 @@ const TINY_JPEG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z
     ok('ui: no outdated wording about aisle estimates or location use',
        !/Aisle estimates|only used to match regional stock|Aisle numbers are estimates|class="auth-headline">Welcome back|Corporations get team/.test(html));
     ok('ui: on phones the department sits under the part name', /@media \(max-width: 520px\) \{\n  \.material-item \{ flex-wrap: wrap; \}/.test(html));
+  }
+
+  // Update list: nobody is mailed until they confirm from their own inbox, and
+  // the encryption key can be rotated without reading a secret back out.
+  {
+    const stores = new Map();
+    const memFor = name => { if (!stores.has(name)) stores.set(name, new Map()); return stores.get(name); };
+    const fakeBlobs = { getStore: (opts) => {
+      const mem = memFor(typeof opts === 'string' ? opts : opts.name);
+      return {
+        get: async k => mem.has(k) ? JSON.parse(mem.get(k)) : null,
+        setJSON: async (k, v) => { mem.set(k, JSON.stringify(v)); },
+        delete: async k => { mem.delete(k); },
+        list: async () => ({ blobs: [...mem.keys()].map(key => ({ key })) }),
+      };
+    } };
+    const mem = memFor('subscribers');
+    const mails = [];
+    const mailFetch = async (url, opts) => {
+      if (String(url).includes('api.resend.com')) {
+        mails.push(JSON.parse(opts.body));
+        return new Response('{"id":"m1"}', { status: 200 });
+      }
+      throw new Error('no network');
+    };
+    const loadU = () => load('updates.js', mailFetch, { '@netlify/blobs': fakeBlobs }).handler;
+    const signup = (h, email, ip) => h({ httpMethod: 'POST', path: '/api/subscribe',
+      headers: { origin: 'https://ask-danny-ai.com', 'x-forwarded-for': ip },
+      body: JSON.stringify({ email, consent: true, source: 'test' }) });
+    const recs = () => [...mem.values()].map(v => JSON.parse(v));
+    const confirm = (h, method, t) => method === 'GET'
+      ? h({ httpMethod: 'GET', path: '/api/confirm', headers: {}, queryStringParameters: { t } })
+      : h({ httpMethod: 'POST', path: '/api/confirm', headers: {}, body: 't=' + encodeURIComponent(t) });
+
+    process.env.LIST_KEY = Buffer.alloc(32, 1).toString('base64');
+    process.env.RESEND_API_KEY = 're_test_' + 'x'.repeat(20);
+    process.env.MAIL_FROM = 'Ask Danny <updates@ask-danny-ai.com>';
+    let h = loadU();
+
+    const r1 = await signup(h, 'kim@example.com', '10.9.9.9');
+    ok('optin: a sign-up starts as pending, not subscribed', r1.statusCode === 200 && recs()[0].status === 'pending');
+    ok('optin: one confirmation email goes to the address',
+       mails.length === 1 && mails[0].to[0] === 'kim@example.com' && /\/api\/confirm\?t=/.test(mails[0].text));
+    await signup(h, 'kim@example.com', '10.9.9.8');
+    ok('optin: signing up again within the hour sends no second email', mails.length === 1, `mails=${mails.length}`);
+    ok('optin: the reply never says whether the address was already there',
+       JSON.parse(r1.body).message === JSON.parse((await signup(h, 'kim@example.com', '10.9.9.7')).body).message);
+
+    const tok = recs()[0].confirmToken;
+    const opened = await confirm(h, 'GET', tok);
+    ok('optin: opening the link shows a button and confirms nothing (mail scanners open links)',
+       opened.statusCode === 200 && /<form method="post"/.test(opened.body) && recs()[0].status === 'pending');
+    const hostile = await confirm(h, 'GET', '"><script>alert(1)</script>');
+    ok('optin: a malformed link code is never written into the page', !/<script>/.test(hostile.body));
+    const unknown = await confirm(h, 'POST', 'A'.repeat(32));
+    ok('optin: an unknown code confirms nothing', /expired/.test(unknown.body) && recs()[0].status === 'pending');
+    const yes = await confirm(h, 'POST', tok);
+    ok('optin: the button confirms the address',
+       yes.statusCode === 200 && recs()[0].status === 'subscribed' && !recs()[0].confirmToken);
+    ok('optin: a confirm link works only once', /expired/.test((await confirm(h, 'POST', tok)).body));
+
+    await signup(h, 'old@example.com', '10.9.9.6');
+    const oldKey = [...mem.keys()].find(k => JSON.parse(mem.get(k)).status === 'pending');
+    const oldRec = JSON.parse(mem.get(oldKey));
+    oldRec.confirmSentAt = new Date(Date.now() - 15 * 864e5).toISOString();
+    mem.set(oldKey, JSON.stringify(oldRec));
+    const late = await confirm(h, 'POST', oldRec.confirmToken);
+    ok('optin: a link older than 14 days confirms nothing',
+       /expired/.test(late.body) && JSON.parse(mem.get(oldKey)).status === 'pending');
+
+    // Not set up to send yet: nothing is mailed, and the reply does not pretend.
+    delete process.env.RESEND_API_KEY;
+    h = loadU();
+    const before = mails.length;
+    const r2 = await signup(h, 'lee@example.com', '10.9.9.5');
+    ok('optin: without a mail provider nothing is sent and the reply does not claim it was',
+       mails.length === before && !/check your inbox|sent you/i.test(JSON.parse(r2.body).message));
+    process.env.ADMIN_TOKEN = 'test-admin-token-value';
+    const admin = body => h({ httpMethod: 'POST', path: '/api/subscribers',
+      headers: { 'x-admin-token': 'test-admin-token-value' }, body: JSON.stringify(body) });
+    const dry = JSON.parse((await admin({ action: 'send-confirmations' })).body);
+    ok('optin: sign-ups that never got an email are counted, as a dry run by default',
+       dry.dryRun === true && dry.wouldSend >= 1, JSON.stringify(dry));
+    process.env.RESEND_API_KEY = 're_test_' + 'x'.repeat(20);
+    h = loadU();
+    const realSend = JSON.parse((await admin({ action: 'send-confirmations', dryRun: false })).body);
+    ok('optin: once sending is set up, they get their confirm email',
+       realSend.sent >= 1 && mails.some(m => m.to[0] === 'lee@example.com'), JSON.stringify(realSend));
+
+    // Rotation: add LIST_KEY_2, rekey, remove LIST_KEY. Nothing is lost.
+    process.env.LIST_KEY_2 = Buffer.alloc(32, 2).toString('base64');
+    h = loadU();
+    const rk = JSON.parse((await admin({ action: 'rekey' })).body);
+    ok('rotate: rekey moves every record to the newest key',
+       rk.newestKey === 2 && rk.unreadable === 0 && recs().every(r => r.keyId === 2), JSON.stringify(rk));
+    delete process.env.LIST_KEY;
+    h = loadU();
+    const exp = await h({ httpMethod: 'GET', path: '/api/subscribers', headers: { 'x-admin-token': 'test-admin-token-value' } });
+    ok('rotate: with the old key removed, every address still reads',
+       /kim@example\.com/.test(exp.body) && /lee@example\.com/.test(exp.body) && /old@example\.com/.test(exp.body));
+    ok('rotate: no stored record holds a readable address', [...mem.values()].every(v => !/@example\.com/.test(v)));
+    for (const k of ['LIST_KEY_2', 'RESEND_API_KEY', 'MAIL_FROM', 'ADMIN_TOKEN']) delete process.env[k];
+  }
+
+  {
+    // Broadcasts reach confirmed subscribers only, and carry a postal address.
+    const mem = new Map();
+    mem.set('a', JSON.stringify({ email: 'yes@example.com', status: 'subscribed', unsubToken: 'tA' }));
+    mem.set('b', JSON.stringify({ email: 'wait@example.com', status: 'pending', unsubToken: 'tB' }));
+    const fakeBlobs = { getStore: () => ({
+      get: async k => mem.has(k) ? JSON.parse(mem.get(k)) : null,
+      setJSON: async () => {},
+      list: async () => ({ blobs: [...mem.keys()].map(key => ({ key })) }),
+    }) };
+    let sends = 0, lastBody = null;
+    const { handler } = load('broadcast.js', async (url, opts) => {
+      sends++; lastBody = JSON.parse(opts.body);
+      return new Response('{"id":"x"}', { status: 200 });
+    }, { '@netlify/blobs': fakeBlobs });
+    process.env.ADMIN_TOKEN = 'test-admin-token-value';
+    const post = body => handler({ httpMethod: 'POST', headers: { 'x-admin-token': 'test-admin-token-value' }, body: JSON.stringify(body) });
+    const dry = JSON.parse((await post({ subject: 'Hi', body: 'News.' })).body);
+    ok('broadcast: pending sign-ups are not mailed', dry.wouldSend === 1 && !(dry.sample || []).includes('wait@example.com'));
+    process.env.RESEND_API_KEY = 're_test_x';
+    process.env.MAIL_FROM = 'Ask Danny <updates@ask-danny-ai.com>';
+    delete process.env.MAIL_POSTAL;
+    const noAddr = await post({ subject: 'Hi', body: 'News.', dryRun: false });
+    ok('broadcast: a real send refuses to go without a postal address',
+       noAddr.statusCode === 503 && sends === 0 && /MAIL_POSTAL/.test(noAddr.body));
+    process.env.MAIL_POSTAL = 'PO Box 1, Los Angeles, CA 90001';
+    const sent = JSON.parse((await post({ subject: 'Hi', body: 'News.', dryRun: false })).body);
+    ok('broadcast: with a postal address it sends, and the address is in the email',
+       sent.sent === 1 && sends === 1 && /PO Box 1/.test(lastBody.text) && /PO Box 1/.test(lastBody.html));
+    for (const k of ['RESEND_API_KEY', 'MAIL_FROM', 'MAIL_POSTAL', 'ADMIN_TOKEN']) delete process.env[k];
   }
 
   console.log('─────────────────────────────────────────────');

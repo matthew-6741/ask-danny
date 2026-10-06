@@ -1,9 +1,11 @@
 /**
  * Ask Danny — product update list.
  *
- *   POST /api/subscribe        { email, source }   -> add an address
+ *   POST /api/subscribe        { email, source }   -> add it as pending, email a confirm link
+ *   GET  /api/confirm?t=..     a page with a button; POST from it -> confirmed
  *   GET  /api/unsubscribe?t=.. one click, no login -> remove it
  *   GET  /api/subscribers      (admin)             -> export the list
+ *   POST /api/subscribers      (admin) { action }  -> "rekey" or "send-confirmations"
  *
  * Three rules this endpoint exists to enforce, because a mailing list that
  * breaks any of them is a liability rather than an asset:
@@ -16,6 +18,9 @@
  *      and the right thing regardless.
  *   3. The list is never readable without the admin token, so a leak of the
  *      site does not leak everyone's address.
+ *   4. An address is only mailed after its owner confirms it. Anyone can type
+ *      someone else's address into a box; only the owner can click the link
+ *      in their inbox. Until then the record is "pending" and broadcasts skip it.
  */
 
 const crypto = require('crypto');
@@ -95,32 +100,37 @@ function keyFor(email) {
 // Set it once with a key only Netlify holds:
 //   netlify env:set LIST_KEY "$(openssl rand -base64 32)"
 //
+// Rotating it: add LIST_KEY_2 (then _3, and so on) with a new key, deploy,
+// and run the admin "rekey" action. The newest key encrypts, every key still
+// set can decrypt, and rekey re-encrypts each record with the newest; after
+// that the older variable can be removed. No secret is ever read back out of
+// Netlify to do this, which matters because secret values can't be.
+//
 // Records written before the key existed keep working: readEmail() returns
 // either form, and each one is re-written encrypted the next time it changes.
-function listKey() {
-  const raw = process.env.LIST_KEY;
-  if (!raw) return null;
-  const key = Buffer.from(raw, 'base64');
-  return key.length === 32 ? key : null;
+function listKeys() {
+  const out = [];
+  for (const [name, raw] of Object.entries(process.env)) {
+    const m = /^LIST_KEY(?:_([0-9]{1,3}))?$/.exec(name);
+    if (!m || !raw) continue;
+    const key = Buffer.from(raw, 'base64');
+    if (key.length === 32) out.push({ id: m[1] ? Number(m[1]) : 1, key });
+  }
+  return out.sort((a, b) => b.id - a.id);   // newest first
 }
 
 function encryptEmail(email) {
-  const key = listKey();
-  if (!key) return null;
+  const newest = listKeys()[0];
+  if (!newest) return null;
   const iv = crypto.randomBytes(12);
-  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+  const cipher = crypto.createCipheriv('aes-256-gcm', newest.key, iv);
   const enc = Buffer.concat([cipher.update(email, 'utf8'), cipher.final()]);
-  return Buffer.concat([iv, cipher.getAuthTag(), enc]).toString('base64');
+  return { emailEnc: Buffer.concat([iv, cipher.getAuthTag(), enc]).toString('base64'), keyId: newest.id };
 }
 
-function readEmail(rec) {
-  if (!rec) return null;
-  if (rec.email) return rec.email;               // written before LIST_KEY
-  if (!rec.emailEnc) return null;
-  const key = listKey();
-  if (!key) return null;                          // key rotated away or unset
+function decryptWith(key, emailEnc) {
   try {
-    const buf = Buffer.from(rec.emailEnc, 'base64');
+    const buf = Buffer.from(emailEnc, 'base64');
     const decipher = crypto.createDecipheriv('aes-256-gcm', key, buf.subarray(0, 12));
     decipher.setAuthTag(buf.subarray(12, 28));
     return Buffer.concat([decipher.update(buf.subarray(28)), decipher.final()]).toString('utf8');
@@ -129,8 +139,81 @@ function readEmail(rec) {
   }
 }
 
+function readEmail(rec) {
+  if (!rec) return null;
+  if (rec.email) return rec.email;               // written before LIST_KEY
+  if (!rec.emailEnc) return null;
+  // The record's own key first; records from before key ids were stored
+  // have none, so every key is tried.
+  const keys = listKeys().sort((a, b) => (b.id === rec.keyId) - (a.id === rec.keyId));
+  for (const { key } of keys) {
+    const email = decryptWith(key, rec.emailEnc);
+    if (email) return email;
+  }
+  return null;
+}
+
 function token() {
   return crypto.randomBytes(24).toString('base64url');
+}
+
+// Only what token() makes. Anything else is refused before it is looked up
+// or written into a page.
+const TOKEN_RE = /^[A-Za-z0-9_-]{20,64}$/;
+
+// ── Confirmation email ───────────────────────────────────────────────────
+const SITE = 'https://ask-danny-ai.com';
+const CONFIRM_RESEND_MS = 60 * 60 * 1000;        // one confirm email an hour per address
+const CONFIRM_TTL_MS = 14 * 24 * 60 * 60 * 1000;  // a link works for 14 days
+
+// The same words whatever happened, so the reply never says whether an
+// address is already on the list, and never claims an email went out when
+// sending is not set up yet.
+const SIGNUP_MESSAGE =
+  "Thanks. We'll email you a link to confirm before sending any updates. If this address is already on the list, nothing changes.";
+
+function sendingReady() {
+  return !!(process.env.RESEND_API_KEY && process.env.MAIL_FROM);
+}
+
+async function sendConfirm(email, confirmToken) {
+  if (!sendingReady()) return false;
+  const link = `${SITE}/api/confirm?t=${encodeURIComponent(confirmToken)}`;
+  const text = 'Tap the link to confirm you want occasional emails about Ask Danny:\n\n'
+    + `${link}\n\nIf you did not ask for this, ignore this email and you will not hear from us again.\n`;
+  const htmlBody = `<!doctype html><html><body style="margin:0;background:#faf8f5;padding:24px;
+font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#000">
+<div style="max-width:520px;margin:0 auto;background:#fff;border:1px solid #d1d1cd;border-radius:16px;padding:32px">
+  <div style="font-weight:500;margin-bottom:18px">Ask Danny</div>
+  <p style="margin:0 0 20px;line-height:1.6">Tap the button to confirm you want occasional emails about Ask Danny.</p>
+  <p style="margin:0 0 24px"><a href="${link}" style="display:inline-block;background:#27251e;color:#fff;
+  text-decoration:none;padding:12px 20px;border-radius:999px">Confirm my email</a></p>
+  <p style="margin:0;font-size:12px;color:#72706b;line-height:1.5">If you did not ask for this, ignore this
+  email and you will not hear from us again.</p>
+</div></body></html>`;
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.RESEND_API_KEY}` },
+      body: JSON.stringify({ from: process.env.MAIL_FROM, to: [email],
+        subject: 'Confirm your Ask Danny updates', text, html: htmlBody }),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+// TOKEN_RE already allows only letters, digits, - and _; this is the second lock.
+function escapeAttr(v) {
+  return String(v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function formField(event, name) {
+  const raw = event.isBase64Encoded
+    ? Buffer.from(event.body || '', 'base64').toString('utf8')
+    : (event.body || '');
+  return new URLSearchParams(raw).get(name) || '';
 }
 
 function normalise(raw) {
@@ -250,6 +333,53 @@ exports.handler = async (event) => {
       + '<p>Changed your mind? You can sign up again on the site any time.</p>'));
   }
 
+  // ── confirm ──────────────────────────────────────────────────────────────
+  // The link opens a page with a button, and only the button's POST confirms.
+  // Mail security scanners open every link in an email; if the GET confirmed,
+  // a scanner would sign up whoever's address someone else typed in.
+  if (path.includes('confirm')) {
+    const t = event.httpMethod === 'POST'
+      ? formField(event, 't')
+      : ((event.queryStringParameters || {}).t || '');
+    const expired = () => html(200, page('Confirm', 'That link has expired',
+      '<p>Confirmation links work for 14 days and only once. Sign up again on the site to get a new one.</p>'));
+    if (!TOKEN_RE.test(t)) return expired();
+
+    if (event.httpMethod !== 'POST') {
+      return html(200, page('Confirm', 'Confirm your email',
+        '<p>Tap the button to start getting occasional emails about Ask Danny. You can unsubscribe in one click from any email.</p>'
+        + `<form method="post" action="/api/confirm"><input type="hidden" name="t" value="${escapeAttr(t)}">`
+        + '<p><button type="submit" style="font:inherit;background:#27251e;color:#fff;border:0;'
+        + 'border-radius:999px;padding:12px 20px;cursor:pointer">Yes, sign me up</button></p></form>'));
+    }
+
+    const failed = () => html(503, page('Confirm', 'Something went wrong',
+      '<p>We could not update the list just now. Try the link again in a few minutes.</p>'));
+    let s;
+    try { s = store(); } catch { return failed(); }
+
+    let hit = null;
+    try {
+      const { blobs } = await s.list();
+      for (const b of blobs) {
+        const rec = await s.get(b.key, { type: 'json' });
+        if (rec && rec.status === 'pending' && rec.confirmToken === t) { hit = { key: b.key, rec }; break; }
+      }
+    } catch { return failed(); }
+
+    const sentAt = hit && Date.parse(hit.rec.confirmSentAt || '');
+    if (!hit || !sentAt || Date.now() - sentAt > CONFIRM_TTL_MS) return expired();
+
+    hit.rec.status = 'subscribed';
+    hit.rec.confirmedAt = new Date().toISOString();
+    hit.rec.confirmIp = ipOf(event);
+    delete hit.rec.confirmToken;
+    try { await s.setJSON(hit.key, hit.rec); } catch { return failed(); }
+
+    return html(200, page('Confirmed', 'You are on the list',
+      '<p>Thanks for confirming. We will only email about Ask Danny, and every email has a one-click unsubscribe link.</p>'));
+  }
+
   // ── admin export ─────────────────────────────────────────────────────────
   if (path.includes('subscribers')) {
     const admin = process.env.ADMIN_TOKEN;
@@ -261,12 +391,18 @@ exports.handler = async (event) => {
       return json(404, { error: 'Not found' });
     }
 
+    if (event.httpMethod === 'POST') return adminAction(event, json);
+
     // ?diag=1 does a write/read round trip and reports the real error.
     // Every other caller gets a generic message, which is right for users and
     // useless for debugging — this is the way back in.
     if ((event.queryStringParameters || {}).diag) {
       const probe = { at: new Date().toISOString() };
-      const steps = { encryptionAtRest: listKey() ? 'on' : 'off (set LIST_KEY)' };
+      const keys = listKeys();
+      const steps = {
+        encryptionAtRest: keys.length ? `on, newest key ${keys[0].id} of [${keys.map(k => k.id).join(', ')}]` : 'off (set LIST_KEY)',
+        sending: sendingReady() ? 'on' : 'off (set RESEND_API_KEY and MAIL_FROM)',
+      };
       // Field names only, never values: the payload holds a Blobs token.
       try {
         steps.contextFields = event.blobs
@@ -304,7 +440,7 @@ exports.handler = async (event) => {
         if (rec) out.push({
           email: readEmail(rec) || '(encrypted: LIST_KEY missing or rotated)',
           status: rec.status, source: rec.source,
-          createdAt: rec.createdAt, unsubscribedAt: rec.unsubscribedAt,
+          createdAt: rec.createdAt, confirmedAt: rec.confirmedAt, unsubscribedAt: rec.unsubscribedAt,
         });
       }
     } catch { return json(503, { error: 'Could not read the list' }); }
@@ -313,6 +449,7 @@ exports.handler = async (event) => {
     return json(200, {
       total: out.length,
       active: out.filter(r => r.status === 'subscribed').length,
+      pending: out.filter(r => r.status === 'pending').length,
       subscribers: out,
     });
   }
@@ -343,26 +480,98 @@ exports.handler = async (event) => {
   let existing = null;
   try { existing = await s.get(key, { type: 'json' }); } catch { /* treat as new */ }
 
-  // Re-subscribing after unsubscribing is allowed, and is a fresh consent —
-  // so the record and its timestamp are replaced, not revived.
+  // Already confirmed: nothing to do, and the reply is the same as for a new
+  // address, so it cannot be used to test who is on the list.
+  if (existing && existing.status === 'subscribed') return json(200, { ok: true, message: SIGNUP_MESSAGE });
+
+  // New, pending or previously unsubscribed: (re)start as pending. A pending
+  // record keeps its confirm token and send time, so signing up again does
+  // not mint a new link or mail the person more than once an hour.
+  const now = new Date().toISOString();
+  const pending = existing && existing.status === 'pending' ? existing : null;
   const encrypted = encryptEmail(email);
   const record = {
-    ...(encrypted ? { emailEnc: encrypted } : { email }),
-    status: 'subscribed',
+    ...(encrypted || { email }),
+    status: 'pending',
     source: String(body.source || 'site').slice(0, 40),
     consentText: CONSENT_TEXT,
-    createdAt: existing && existing.status === 'subscribed'
-      ? existing.createdAt : new Date().toISOString(),
-    consentedAt: new Date().toISOString(),
+    createdAt: (pending && pending.createdAt) || now,
+    consentedAt: now,
     consentIp: ipOf(event),
     unsubToken: (existing && existing.unsubToken) || token(),
+    confirmToken: (pending && pending.confirmToken) || token(),
   };
+  if (pending && pending.confirmSentAt) record.confirmSentAt = pending.confirmSentAt;
 
   try { await s.setJSON(key, record); }
   catch { return json(503, { error: 'Could not save that just now. Try again shortly.' }); }
 
-  // The same answer whether the address was already on the list or not.
-  // Saying "you are already subscribed" turns this into a way to test whether
-  // a given person uses Ask Danny.
-  return json(200, { ok: true, message: 'You are on the list. We will only email about Ask Danny.' });
+  const lastSent = Date.parse(record.confirmSentAt || '') || 0;
+  if (Date.now() - lastSent > CONFIRM_RESEND_MS && await sendConfirm(email, record.confirmToken)) {
+    record.confirmSentAt = new Date().toISOString();
+    try { await s.setJSON(key, record); } catch { /* the email went; the cooldown is best effort */ }
+  }
+
+  return json(200, { ok: true, message: SIGNUP_MESSAGE });
 };
+
+// ── Admin actions ─────────────────────────────────────────────────────────
+//   { "action": "rekey" }  re-encrypt every record with the newest LIST_KEY
+//   { "action": "send-confirmations", "dryRun": false }
+//                          email a confirm link to every pending address that
+//                          never got one (sign-ups from before sending was set up)
+async function adminAction(event, json) {
+  let body;
+  try { body = JSON.parse(event.body || '{}'); } catch { return json(400, { error: 'Invalid JSON.' }); }
+
+  let s;
+  try { s = store(); } catch { return json(503, { error: 'Store unavailable' }); }
+  let blobs;
+  try { ({ blobs } = await s.list()); } catch { return json(503, { error: 'Could not read the list' }); }
+
+  if (body.action === 'rekey') {
+    const newest = listKeys()[0];
+    if (!newest) return json(400, { error: 'No LIST_KEY is set, so there is nothing to encrypt with.' });
+    const counts = { rekeyed: 0, alreadyCurrent: 0, unreadable: 0 };
+    for (const b of blobs) {
+      let rec;
+      try { rec = await s.get(b.key, { type: 'json' }); } catch { counts.unreadable++; continue; }
+      if (!rec) continue;
+      if (!rec.email && rec.keyId === newest.id) { counts.alreadyCurrent++; continue; }
+      const email = readEmail(rec);
+      if (!email) { counts.unreadable++; continue; }   // left exactly as it was
+      const enc = encryptEmail(email);
+      delete rec.email;
+      Object.assign(rec, enc);
+      try { await s.setJSON(b.key, rec); counts.rekeyed++; } catch { counts.unreadable++; }
+    }
+    return json(200, { newestKey: newest.id, ...counts,
+      next: counts.unreadable
+        ? 'Some records could not be read with any key that is set. Keep the old LIST_KEY variables until they are dealt with.'
+        : `Every record now uses key ${newest.id}. Older LIST_KEY variables can be removed.` });
+  }
+
+  if (body.action === 'send-confirmations') {
+    const due = [];
+    for (const b of blobs) {
+      const rec = await s.get(b.key, { type: 'json' }).catch(() => null);
+      if (rec && rec.status === 'pending' && !rec.confirmSentAt && TOKEN_RE.test(rec.confirmToken || '')) due.push({ key: b.key, rec });
+    }
+    if (body.dryRun !== false) {
+      return json(200, { dryRun: true, wouldSend: due.length, note: 'Nothing was sent. Pass "dryRun": false to send.' });
+    }
+    if (!sendingReady()) return json(503, { error: 'Sending is not configured yet.', needs: ['RESEND_API_KEY', 'MAIL_FROM'] });
+    let sent = 0, failed = 0;
+    for (const { key, rec } of due) {
+      const email = readEmail(rec);
+      if (email && await sendConfirm(email, rec.confirmToken)) {
+        rec.confirmSentAt = new Date().toISOString();
+        await s.setJSON(key, rec).catch(() => {});
+        sent++;
+      } else failed++;
+    }
+    return json(200, { dryRun: false, sent, failed });
+  }
+
+  return json(400, { error: 'Unknown action. Use "rekey" or "send-confirmations".' });
+}

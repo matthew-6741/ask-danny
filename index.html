@@ -3193,7 +3193,7 @@ async function submitUpdates(e) {
     if (res.status === 503) {
       const ok = await postToNetlifyForms(email);
       return show(ok
-        ? 'You are on the list. We will only email about Ask Danny.'
+        ? "Thanks. We'll email you a link to confirm before sending any updates."
         : 'Could not add that address. Try again shortly.', ok ? 'ok' : 'bad'), false;
     }
 
