@@ -1093,6 +1093,19 @@ textarea::placeholder { color: var(--placeholder); }
 
 .item-body { flex: 1; min-width: 0; }
 .material-name { font-size: 14px; font-weight: 500; color: var(--text); }
+
+/* Store, trade and measurements, folded under the question */
+.options { border-top: 1px solid var(--border); }
+.options > summary {
+  list-style: none; cursor: pointer;
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 18px;
+}
+.options > summary::-webkit-details-marker { display: none; }
+.options > summary::after { content: '+'; margin-left: auto; font-size: 18px; color: var(--muted); }
+.options[open] > summary::after { content: '\2212'; }
+.options-picked { font-size: 13px; color: var(--muted); }
+
 .material-spec { font-size: 12px; color: var(--muted); margin-top: 2px; line-height: 1.5; }
 
 .item-meta {
@@ -1114,6 +1127,17 @@ textarea::placeholder { color: var(--placeholder); }
   text-align: right;
   max-width: 170px;
   line-height: 1.35;
+}
+
+/* Phones: the department goes under the part's name instead of squeezing it */
+@media (max-width: 520px) {
+  .material-item { flex-wrap: wrap; }
+  .item-meta {
+    flex-basis: 100%; flex-direction: row; align-items: baseline;
+    justify-content: space-between; gap: 12px; padding-left: 38px;
+  }
+  .dept-badge { text-align: left; max-width: none; flex: 1; }
+  .action-row { flex-wrap: wrap; }
 }
 .aisle-badge {
   font-size: 12px;
@@ -1634,21 +1658,21 @@ strong, b { font-weight: 500; }
         <p class="lp-media-msg" id="lpMediaMsg" role="alert"></p>
         <fieldset class="lp-trades">
           <legend class="sr-only">Trade</legend>
-          <label><input type="radio" name="trade" value="plumbing" checked><span>Plumbing</span></label>
+          <label><input type="radio" name="trade" value="plumbing"><span>Plumbing</span></label>
           <label><input type="radio" name="trade" value="hvac"><span>HVAC</span></label>
           <label><input type="radio" name="trade" value="carpentry"><span>Carpentry</span></label>
           <label><input type="radio" name="trade" value="auto"><span>Auto</span></label>
           <label><input type="radio" name="trade" value="appliance"><span>Appliance</span></label>
         </fieldset>
       </form>
-      <p class="lp-fine">Aisle numbers and prices are estimates. For gas, electrical or structural work, hire a licensed professional.</p>
+      <p class="lp-fine">Prices and store locations are estimates. For gas, electrical or structural work, hire a licensed professional.</p>
     </section>
 
     <section class="lp-section" aria-labelledby="lpHow">
       <h2 id="lpHow">How it works</h2>
       <ol class="lp-steps">
         <li><strong>Describe the job</strong><span>Type what's wrong, say it out loud, or add a photo or video.</span></li>
-        <li><strong>Pick your store</strong><span>Home Depot, Lowe's or AutoZone, or compare Home Depot and Lowe's side by side.</span></li>
+        <li><strong>We pick the store</strong><span>AutoZone for car jobs, Home Depot for the rest. Switch to Lowe's, or compare stores side by side, if you like.</span></li>
         <li><strong>Get the list</strong><span>The steps to fix it, plus parts, specs and quantities, where to find each one, and a cost estimate.</span></li>
       </ol>
     </section>
@@ -1739,8 +1763,8 @@ strong, b { font-weight: 500; }
       <div class="auth-logo-mark">AD</div>
       <div class="auth-logo-text">Ask Danny</div>
     </div>
-    <div class="auth-headline">Welcome back</div>
-    <div class="auth-sub">Sign in to save your job history and material lists across devices. Corporations get team history and reporting.</div>
+    <div class="auth-headline">Sign in</div>
+    <div class="auth-sub">Sign in to save your job history and material lists across devices.</div>
 
     <!-- Google -->
     <button class="auth-google-btn" data-act="authGoogle">
@@ -1797,21 +1821,12 @@ strong, b { font-weight: 500; }
   <div class="ack-card">
     <div class="ack-icon"><svg class="ico" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></div>
     <h2 class="ack-title">Before you start</h2>
-    <p class="ack-lede">Ask Danny builds your material lists with artificial intelligence. That means it is fast and thorough, and it also means it can be wrong.</p>
+    <p class="ack-lede">Ask Danny uses AI, so it can be wrong.</p>
 
     <ul class="ack-list">
-      <li><strong>Aisle numbers are estimates.</strong> Layouts differ by store and change after remodels.</li>
-      <li><strong>Prices are approximate</strong> and won't match your receipt exactly.</li>
-      <li><strong>Items can be missed or invented.</strong> Anything marked (*) wasn't matched to our verified product database.</li>
-      <li><strong>Repair steps are general guidance.</strong> Follow the instructions for your model. For gas, electrical, structural, or permitted work, hire a licensed professional.</li>
-    </ul>
-
-    <h3 class="ack-sub">What gets collected</h3>
-    <ul class="ack-list ack-data">
-      <li><strong>What you type, photograph or record is sent to an AI company</strong> (Anthropic, Google, OpenAI or Groq) to build your list. Don't include personal or sensitive details.</li>
-      <li><strong>Location is optional</strong> and only used to match regional stock. Decline it and everything still works.</li>
-      <li><strong>As a guest, nothing is stored on our servers</strong> — your history stays in this browser. Make an account and it's saved to Google Firebase instead.</li>
-      <li><strong>Anonymous usage stats</strong> are only collected if you accept analytics in the cookie banner. Decline and nothing is sent to Google. Either way we don't sell data and don't run ads.</li>
+      <li><strong>Parts, prices and store locations are estimates.</strong> Check before you buy.</li>
+      <li><strong>Repair steps are general guidance.</strong> For gas, electrical, structural or permitted work, hire a licensed professional.</li>
+      <li><strong>What you type or show us goes to an AI company</strong> (Anthropic, Google, OpenAI or Groq) to build your answer. Leave out personal details.</li>
     </ul>
 
     <label class="ack-check" for="ackBox">
@@ -1837,7 +1852,7 @@ strong, b { font-weight: 500; }
       <div class="logo-mark">AD</div>
       <div>
         <div class="logo-text">Ask Danny</div>
-        <div class="logo-sub">One-trip parts list · Aisle estimates</div>
+        <div class="logo-sub">One-trip parts list · Steps, parts and cost</div>
       </div>
     </div>
     <div class="header-right">
@@ -1884,8 +1899,62 @@ strong, b { font-weight: 500; }
   <!-- Input card -->
   <div class="card" id="inputCard">
 
-    <!-- Store -->
+    <!-- Describe -->
     <div class="card-header">
+      <div class="card-title">Describe the job, or show it with a photo or video</div>
+      <div class="header-tools">
+        <button class="mic-btn" id="photoBtn" data-act="openPhotoPicker" title="Add a photo or video of the problem" aria-label="Add a photo or video"><svg class="ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
+        <button class="mic-btn" id="micBtn" data-act="toggleVoice" title="Tap to speak" aria-label="Describe the job by voice"><svg class="ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><path d="M12 19v4"/></svg></button>
+      </div>
+    </div>
+    <div class="card-body">
+      <!-- No capture attribute: phones then offer the camera (photo or video),
+           the photo library and files, instead of forcing the camera open. -->
+      <input type="file" id="photoInput" accept="image/*,video/*"
+             style="display:none" data-act-change="onPhotoPicked">
+
+      <div class="photo-strip" id="photoStrip" style="display:none">
+        <img id="photoPreview" alt="Photo of the job">
+        <div class="photo-meta">
+          <div class="photo-name" id="photoName">Photo attached</div>
+          <div class="photo-hint" id="photoHint">Danny will read this along with your description.</div>
+        </div>
+        <button class="photo-remove" data-act="clearPhoto" title="Remove" aria-label="Remove the attached photo or video">&times;</button>
+      </div>
+
+
+
+      <div class="prompt-wrap">
+        <textarea id="prompt"
+          placeholder="e.g. Replace a leaking P-trap under a kitchen sink, 1½ inch PVC, tenant building, need everything to do the job properly and not have to come back..."
+          maxlength="800"
+          data-act-input="onInput"
+          data-act-keydown="onKey"></textarea>
+        <span class="char-count" id="charCount">0 / 800</span>
+      </div>
+
+      <div class="submit-row" style="margin-top:14px">
+        <button class="submit-btn" id="submitBtn" data-act="submitJob" disabled>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+          Build my material list
+        </button>
+        <button class="clear-btn" data-act="clearAll">Clear</button>
+      </div>
+
+      <div class="tip-row" style="margin-top:14px">
+        <div class="tip"><strong>Be specific</strong>Include pipe size, area dimensions, material type, or brand where it matters.</div>
+        <div class="tip"><strong>Mention constraints</strong>Rental property, code requirements, tight space, matching existing — all help.</div>
+        <div class="tip"><strong>Goal</strong>Danny will list every item needed so you make one trip and return nothing.</div>
+      </div>
+
+    </div>
+
+    <!-- Options: picked from what they type, changed here if they want -->
+    <details class="options" id="optionsPanel">
+      <summary><span class="card-title">Options</span><span class="options-picked" id="optionsPicked">Home Depot · Plumbing</span></summary>
+
+    <!-- Store -->
+    <div class="card-header" style="border-top:1px solid var(--border)">
       <div class="card-title">Store</div>
     </div>
     <div class="card-body">
@@ -1971,54 +2040,7 @@ strong, b { font-weight: 500; }
       </div>
     </div>
 
-    <!-- Describe -->
-    <div class="card-header" style="border-top:1px solid var(--border)">
-      <div class="card-title">Describe the job, or show it with a photo or video</div>
-      <div class="header-tools">
-        <button class="mic-btn" id="photoBtn" data-act="openPhotoPicker" title="Add a photo or video of the problem" aria-label="Add a photo or video"><svg class="ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
-        <button class="mic-btn" id="micBtn" data-act="toggleVoice" title="Tap to speak" aria-label="Describe the job by voice"><svg class="ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><path d="M12 19v4"/></svg></button>
-      </div>
-    </div>
-    <div class="card-body">
-      <!-- No capture attribute: phones then offer the camera (photo or video),
-           the photo library and files, instead of forcing the camera open. -->
-      <input type="file" id="photoInput" accept="image/*,video/*"
-             style="display:none" data-act-change="onPhotoPicked">
-
-      <div class="photo-strip" id="photoStrip" style="display:none">
-        <img id="photoPreview" alt="Photo of the job">
-        <div class="photo-meta">
-          <div class="photo-name" id="photoName">Photo attached</div>
-          <div class="photo-hint" id="photoHint">Danny will read this along with your description.</div>
-        </div>
-        <button class="photo-remove" data-act="clearPhoto" title="Remove" aria-label="Remove the attached photo or video">&times;</button>
-      </div>
-
-
-
-      <div class="prompt-wrap">
-        <textarea id="prompt"
-          placeholder="e.g. Replace a leaking P-trap under a kitchen sink, 1½ inch PVC, tenant building, need everything to do the job properly and not have to come back..."
-          maxlength="800"
-          data-act-input="onInput"
-          data-act-keydown="onKey"></textarea>
-        <span class="char-count" id="charCount">0 / 800</span>
-      </div>
-
-      <div class="tip-row" style="margin-top:14px">
-        <div class="tip"><strong>Be specific</strong>Include pipe size, area dimensions, material type, or brand where it matters.</div>
-        <div class="tip"><strong>Mention constraints</strong>Rental property, code requirements, tight space, matching existing — all help.</div>
-        <div class="tip"><strong>Goal</strong>Danny will list every item needed so you make one trip and return nothing.</div>
-      </div>
-
-      <div class="submit-row" style="margin-top:14px">
-        <button class="submit-btn" id="submitBtn" data-act="submitJob" disabled>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
-          Build my material list
-        </button>
-        <button class="clear-btn" data-act="clearAll">Clear</button>
-      </div>
-    </div>
+    </details>
   </div>
 
   <!-- Error -->
@@ -2029,7 +2051,7 @@ strong, b { font-weight: 500; }
     <div class="spinner"></div>
     <div class="loading-label" id="loadingLabel">Building your complete list…</div>
     <div class="loading-steps">
-      <div class="loading-step active" id="step1"><svg class="ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0116 0z"/><circle cx="12" cy="10" r="3"/></svg> Reading your location</div>
+      <div class="loading-step active" id="step1"><svg class="ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0116 0z"/><circle cx="12" cy="10" r="3"/></svg> Reading what you typed</div>
       <div class="loading-step"        id="step2">Analysing the job</div>
       <div class="loading-step"        id="step3"><svg class="ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg> Selecting exact materials</div>
       <div class="loading-step"        id="step4"><svg class="ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 6v16l7-4 8 4 7-4V2l-7 4-8-4-7 4z"/><path d="M8 2v16"/><path d="M16 6v16"/></svg> Finding where each part is shelved</div>
@@ -2043,7 +2065,7 @@ strong, b { font-weight: 500; }
     <div class="ai-label">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
       <span>Generated by AI. No tradesperson has checked this list. Verify quantities,
-      specs and aisle numbers in store, and hire a licensed pro for gas, electrical or
+      specs and store locations in store, and hire a licensed pro for gas, electrical or
       structural work. <a href="/terms.html#ai" target="_blank" rel="noopener">How we use AI</a></span>
     </div>
 
@@ -2150,7 +2172,7 @@ strong, b { font-weight: 500; }
 
   <footer class="site-footer">
     <p class="ai-note">
-      Material lists are built from the job details you provide. Aisle numbers and prices are estimates —
+      Material lists are built from the job details you provide. Prices and store locations are estimates —
       confirm in store. Not a substitute for a licensed professional.
     </p>
     <nav class="footer-links">
@@ -2277,9 +2299,13 @@ function leaveLanding() {
   window.scrollTo(0, 0);
 }
 
+// Accounts are not set up yet (Firebase still has placeholder config), so
+// there is nothing to sign in to: the sign-in screen used to greet first-time
+// visitors with "Welcome back" and buttons that could not work. Without
+// accounts, go straight to the app as a guest.
 function openSignIn() {
   leaveLanding();
-  if (fbAuth && fbAuth.currentUser) showApp();
+  if (!fbAuth || fbAuth.currentUser) showApp();
   else document.getElementById('authScreen').style.display = 'flex';
 }
 
@@ -2292,6 +2318,7 @@ const LINK_TRADES = ['plumbing', 'hvac', 'carpentry', 'auto', 'appliance'];
 // Only known trade names reach the selector below.
 function pickTrade(trade) {
   if (!LINK_TRADES.includes(trade)) return;
+  tradeChosen = true;   // a link or the landing page named it
   const chip = document.querySelector(`.trade-chip[data-trade="${trade}"]`);
   if (chip) setTrade(chip);
   // The auto guides promise AutoZone; the store picker defaults to Home Depot.
@@ -2304,12 +2331,11 @@ function pickTrade(trade) {
 function applyJobLink() {
   const params = new URLSearchParams(location.search);
   if (!params.has('job') && !params.has('trade')) return;
-  pickTrade(params.get('trade'));
   const job = (params.get('job') || '').trim().slice(0, 800);
-  if (job) {
-    document.getElementById('prompt').value = job;
-    onInput();
-  }
+  if (job) document.getElementById('prompt').value = job;
+  if (params.get('trade')) pickTrade(params.get('trade'));
+  else guessFromText();
+  if (job) onInput();
   history.replaceState(null, '', location.pathname + location.hash);
 }
 
@@ -2334,9 +2360,11 @@ async function init() {
       }
     });
   } else {
-    // Firebase not configured — still show auth screen so user can continue as guest
+    // No accounts yet: everyone is a guest, so skip the sign-in screen.
+    const signIn = document.querySelector('.lp-signin');
+    if (signIn) signIn.textContent = 'Open the app';
     const gatePassed = sessionStorage.getItem(ACCESS_SESSION) === 'granted';
-    if (gatePassed && !landingActive()) document.getElementById('authScreen').style.display = 'flex';
+    if (gatePassed && !landingActive()) showApp();
   }
 }
 
@@ -2359,11 +2387,23 @@ function showApp() {
   document.getElementById('authScreen').style.display = 'none';
 
   if (!hasAcknowledgedAI()) {
+    document.getElementById('ackBtn').textContent = jobReady() ? 'Agree and get my answer' : 'Agree & continue';
     document.getElementById('aiAckScreen').style.display = 'flex';
     document.body.style.overflow = 'hidden';
     return;
   }
   revealShell();
+}
+
+// Set when the person has already asked for an answer (the landing page's go
+// button, or agreeing to the acknowledgement with a job typed in), so the app
+// builds it as soon as it opens instead of making them press a second button.
+// Never set by a link alone: a crawler following a guide's ?job= link must
+// not spend an AI request.
+let runWhenReady = false;
+
+function jobReady() {
+  return document.getElementById('prompt').value.trim().length >= 10 || !!jobPhoto;
 }
 
 function revealShell() {
@@ -2372,6 +2412,10 @@ function revealShell() {
   document.querySelector('.shell').style.display = 'flex';
   applyPlanUI();
   renderUsage();
+  if (runWhenReady) {
+    runWhenReady = false;
+    if (jobReady()) submitJob();
+  }
 }
 
 function onAckChange() {
@@ -2382,6 +2426,7 @@ function acceptAiAck() {
   if (!document.getElementById('ackBox').checked) return;
   try { localStorage.setItem(AI_ACK_KEY, 'yes'); } catch {}
   if (typeof gtag === 'function') gtag('event', 'ai_disclaimer_accepted');
+  runWhenReady = runWhenReady || jobReady();
   revealShell();
 }
 
@@ -2824,16 +2869,70 @@ function loadCachedResult() {
 }
 
 // ── Store / Trade selection ──
+/* trade-guess:start */
+// The trade, read from the words people use. Car words outweigh everything
+// ("AC in the car blows warm" is a car job), and a named appliance outweighs
+// plumbing words ("washer won't drain" is the washer). Checked against the
+// jobs in eval/jobs.json by eval/local-check.js.
+const TRADE_WORDS = [
+  ['auto', 5, /\b(car|cars|truck|suv|minivan|vehicle|engine|brakes?|tires?|tyres?|wipers?|headlights?|taillights?|alternator|starter|transmission|radiator|muffler|exhaust|spark plugs?|oil change|check engine|temperature gauge|battery light|driving|civic|camry|corolla|accord)\b/g],
+  ['appliance', 3, /\b(fridge|refrigerator|freezer|ice maker|washer|washing machine|dryer|dishwasher|oven|stove|stovetop|cooktop|microwave|range hood)\b/g],
+  ['hvac', 3, /\b(ac|a\/c|air condition\w*|furnace|heat pump|thermostat|hvac|vents?|ducts?|condenser|compressor|air handler)\b/g],
+  ['hvac', 1, /\b(warm|heat|heating|cooling)\b/g],
+  ['plumbing', 2, /\b(toilet|faucet|sink|drains?|pipes?|plumbing|water heater|hot water|disposal|sump|shower|tub|spigot|hose bib|p-trap|clog\w*|leak\w*|valve|sewer|pressure|burst|frozen|freez\w*)\b/g],
+  ['carpentry', 2, /\b(drywall|doors?|latch|deck|cabinets?|baseboards?|trim|frame|framing|studs?|squeak\w*|mirror|railing|stairs?|load-bearing|walls?|shelf|shelves|hinges?)\b/g],
+];
+
+function guessTrade(text) {
+  const t = String(text || '').toLowerCase();
+  const score = {};
+  for (const [trade, weight, re] of TRADE_WORDS) {
+    const hits = (t.match(re) || []).length;
+    if (hits) score[trade] = (score[trade] || 0) + hits * weight;
+  }
+  const ranked = Object.entries(score).sort((a, b) => b[1] - a[1]);
+  if (!ranked.length || (ranked[1] && ranked[1][1] === ranked[0][1])) return '';
+  return ranked[0][0];
+}
+/* trade-guess:end */
+
+// Set once the person picks a trade or store themselves; after that their
+// choice stands and nothing is guessed over it.
+let tradeChosen = false, storeChosen = false;
+
+function guessFromText() {
+  if (tradeChosen) return;
+  const trade = guessTrade(document.getElementById('prompt').value);
+  if (!trade || trade === currentTrade) return;
+  const chip = document.querySelector(`.trade-chip[data-trade="${trade}"]`);
+  if (chip) setTrade(chip);
+  if (!storeChosen) {
+    // Car parts come from AutoZone; everything else from Home Depot by default.
+    const want = trade === 'auto' ? 'az' : (currentStore === 'az' ? 'hd' : currentStore);
+    const btn = document.querySelector(`.store-btn[data-store="${want}"]`);
+    if (btn && want !== currentStore) setStore(btn);
+  }
+}
+
 function setStore(btn) {
   document.querySelectorAll('.store-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   currentStore = btn.dataset.store;
+  showPicked();
+}
+
+// The folded options say what is picked, so a guessed trade is never hidden.
+function showPicked() {
+  const chip = document.querySelector('.trade-chip.active');
+  setText(document.getElementById('optionsPicked'),
+    `${STORES[currentStore].name} · ${chip ? chip.textContent.trim() : ''}`);
 }
 
 function setTrade(btn) {
   document.querySelectorAll('.trade-chip').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   currentTrade = btn.dataset.trade;
+  showPicked();
 }
 
 // ── Measurements (qty calculator) ──
@@ -2869,6 +2968,7 @@ function onInput() {
   ta.style.height = Math.min(ta.scrollHeight, 260) + 'px';
   // A photo on its own is a valid job — the AI can read the problem from it.
   document.getElementById('submitBtn').disabled = ta.value.trim().length < 10 && !jobPhoto;
+  guessFromText();
 }
 
 function onKey(e) {
@@ -3141,8 +3241,8 @@ const ACTIONS = {
   // history
   closeHistory, clearHistory,
   // job input
-  setTrade: el => setTrade(el),
-  setStore: el => setStore(el),
+  setTrade: el => { tradeChosen = true; setTrade(el); },
+  setStore: el => { storeChosen = true; setStore(el); },
   startCompare, toggleMeasurements, toggleVoice, clearPhoto, submitJob, clearAll,
   onInput,
   onKey: (el, e) => onKey(e),
@@ -3220,9 +3320,12 @@ function submitLanding(e) {
   const form = e.target.closest('form');
   const job = form.elements.job.value.trim().slice(0, 800);
   if (!job && !jobPhoto) { form.elements.job.focus(); return; }
-  pickTrade(form.elements.trade.value);
   if (job) document.getElementById('prompt').value = job;
+  // A trade they picked wins; otherwise it is read from what they typed.
+  if (form.elements.trade.value) pickTrade(form.elements.trade.value);
+  else guessFromText();
   onInput();
+  runWhenReady = true;
   openSignIn();
 }
 

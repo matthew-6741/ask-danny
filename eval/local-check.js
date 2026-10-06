@@ -1068,6 +1068,40 @@ const TINY_JPEG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z
     ok('layouts: the security policy lets the page read the GitHub copy', /https:\/\/raw\.githubusercontent\.com/.test(csp));
   }
 
+  // First visit: type the problem, agree once, get the answer. The trade and
+  // store are read from the words; the sign-in screen waits for accounts.
+  {
+    const vm = require('vm');
+    const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+    const src = (html.match(/\/\* trade-guess:start \*\/([\s\S]*?)\/\* trade-guess:end \*\//) || [])[1] || '';
+    const ctx = vm.createContext({});
+    let guessTrade = null;
+    try { vm.runInContext(src + '\nthis.g = guessTrade;', ctx); guessTrade = ctx.g; }
+    catch (e) { ok('ui: the trade guesser loads', false, e.message); }
+    if (guessTrade) {
+      const jobs = JSON.parse(fs.readFileSync(path.join(__dirname, 'jobs.json'), 'utf8')).jobs.filter(j => !/^x/.test(j.id));
+      const wrong = jobs.filter(j => guessTrade(j.text) !== j.trade);
+      ok('ui: the trade is read correctly from at least 90% of real test jobs',
+         wrong.length <= Math.floor(jobs.length * 0.1),
+         `${jobs.length - wrong.length}/${jobs.length}; wrong: ` + wrong.map(j => `"${j.text}" → ${guessTrade(j.text) || 'none'} (${j.trade})`).join('; '));
+      ok('ui: a car job in a car is a car job, not HVAC', guessTrade('AC in the car blows warm') === 'auto');
+      ok('ui: nothing is guessed from no clues', guessTrade('help') === '' && guessTrade('asdfghjkl') === '');
+    }
+    const fnBody = name => (html.match(new RegExp(`function ${name}\\([^)]*\\) \\{([\\s\\S]*?)\\n\\}`)) || [])[1] || '';
+    ok('ui: without accounts, the sign-in screen is skipped', /if \(!fbAuth \|\| fbAuth\.currentUser\) showApp\(\);/.test(fnBody('openSignIn')));
+    ok('ui: a guide link fills the job but never runs it by itself',
+       !/submitJob|runWhenReady/.test(fnBody('applyJobLink')) && /runWhenReady = true;/.test(fnBody('submitLanding')));
+    ok('ui: agreeing with a job typed in builds the answer straight away',
+       /runWhenReady = runWhenReady \|\| jobReady\(\);/.test(fnBody('acceptAiAck')) && /if \(jobReady\(\)\) submitJob\(\);/.test(fnBody('revealShell')));
+    ok('ui: the question and its button come before the store and trade pickers',
+       html.indexOf('id="prompt"') < html.indexOf('id="storeRow"') && html.indexOf('id="submitBtn"') < html.indexOf('id="optionsPanel"'));
+    ok('ui: a picked trade or store is never guessed over',
+       /setTrade: el => \{ tradeChosen = true; setTrade\(el\); \}/.test(html) && /if \(tradeChosen\) return;/.test(html));
+    ok('ui: no outdated wording about aisle estimates or location use',
+       !/Aisle estimates|only used to match regional stock|Aisle numbers are estimates|class="auth-headline">Welcome back|Corporations get team/.test(html));
+    ok('ui: on phones the department sits under the part name', /@media \(max-width: 520px\) \{\n  \.material-item \{ flex-wrap: wrap; \}/.test(html));
+  }
+
   console.log('─────────────────────────────────────────────');
   console.log(`  ${pass} passed, ${fail} failed`);
   if (failures.length) {
