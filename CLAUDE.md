@@ -138,7 +138,7 @@ it clears 4.5:1. Every text colour on the site passes WCAG AA.
 
 The site has been linked to GitHub (`matthew-6741/ask-danny`, branch `main`)
 since 2026-09-16. **Pushing to `main` deploys to production.** Netlify runs
-`scripts/build.js`, which runs `eval/local-check.js` (160 checks) and fails the
+`scripts/build.js`, which runs `eval/local-check.js` (168 checks) and fails the
 build if any fail. It then copies an explicit allowlist of 12 site files into
 `dist/`, which is what gets published. Functions deploy from
 `netlify/functions/`.
@@ -163,7 +163,7 @@ node scripts/build.js                    # checks, then dist/
 netlify deploy --dir dist --functions netlify/functions   # prints a draft URL
 ```
 
-Then push to `main` to ship it. **Pushes that only touch docs (`*.md`), `.github/` or `eval/` do not build.**
+Then push to `main` to ship it. **Pushes that only touch docs (`*.md`), `.github/`, `eval/`, `store-data/` or the live data files (below) do not build.**
 Every production deploy costs 15 of the free plan's 300 monthly credits, so the
 `ignore` rule in `netlify.toml` skips those. To redeploy after changing an
 environment variable, use **Trigger deploy** in the Netlify UI: it rebuilds the
@@ -210,5 +210,24 @@ department on the list. Further out, nothing is shown, because their nearest
 Home Depot is probably one without a plan. The matching functions sit between
 `/* layout-fns:start */` and `/* layout-fns:end */` in index.html, and
 `eval/local-check.js` runs those exact functions. Adding a store: add it to the
-JSON and bump `LAYOUT_VERSION`, which also re-asks people who were too far from
-every store before.
+JSON and set `meta.updated` to today, which also re-asks people who were too far
+from every store before.
+
+## Updating data without a deploy
+
+A production deploy costs 15 credits whatever changed, so data is read live from
+GitHub instead of from the deploy:
+
+- `store-layouts.json`: the page fetches it from
+  `raw.githubusercontent.com/matthew-6741/ask-danny/main/`, falling back to the
+  deployed copy. `connect-src` in the CSP allows that host.
+- `netlify/functions/products.json`: `ai-council.js` fetches it the same way at
+  most every five minutes per warm instance (`refreshProducts`), falling back to
+  the bundled copy if GitHub is down or the file is malformed (`validProducts`).
+  Keep the root `products.json` identical; only local Ollama mode reads it.
+
+The `ignore` rule in `netlify.toml` skips builds for pushes that change only those
+files (plus `store-data/`). So: edit, run `node eval/local-check.js`, push, and the
+change is live in about five minutes for 0 credits. GitHub's raw files are cached
+for five minutes. The deployed fallback copies catch up at the next real deploy.
+A data push that also touches code still builds, as it should.

@@ -2558,16 +2558,31 @@ async function loadProducts() {
 // once, the first time someone asks for a Home Depot list; after that only the
 // nearest mapped store's id is kept, on this device. Coordinates are never
 // stored or sent anywhere by this.
-const LAYOUT_VERSION = '2026-09-27';
-const MY_STORE_KEY   = 'diagnostech_store_v1';
+//
+// The file is read from the GitHub repo first, so adding a store goes live
+// without a Netlify deploy (15 credits each); a push that changes only data
+// files skips the build. The copy deployed with the site is the fallback.
+const LAYOUTS_URL  = 'https://raw.githubusercontent.com/matthew-6741/ask-danny/main/store-layouts.json';
+const MY_STORE_KEY = 'diagnostech_store_v1';
 let STORE_LAYOUTS = null;
 let lastWhere     = null; // the list on screen, redrawn once the store is known
 
 async function loadLayouts() {
-  try {
-    const res = await fetch(`store-layouts.json?v=${LAYOUT_VERSION}`);
-    STORE_LAYOUTS = await res.json();
-  } catch { STORE_LAYOUTS = null; }
+  for (const url of [LAYOUTS_URL, 'store-layouts.json']) {
+    try {
+      const signal = window.AbortSignal && AbortSignal.timeout ? AbortSignal.timeout(4000) : undefined;
+      const res = await fetch(url, { signal });
+      if (!res.ok) continue;
+      const data = await res.json();
+      if (data && Array.isArray(data.stores)) { STORE_LAYOUTS = data; return; }
+    } catch { /* try the next copy */ }
+  }
+}
+
+// Bumped in the file whenever stores are added, so people who were too far
+// from every mapped store get asked again.
+function layoutVersion() {
+  return (STORE_LAYOUTS && STORE_LAYOUTS.meta && STORE_LAYOUTS.meta.updated) || '';
 }
 
 /* layout-fns:start */
@@ -2644,7 +2659,7 @@ function savedStore() {
 }
 
 function saveStore(rec) {
-  try { localStorage.setItem(MY_STORE_KEY, JSON.stringify({ ...rec, v: LAYOUT_VERSION })); } catch {}
+  try { localStorage.setItem(MY_STORE_KEY, JSON.stringify({ ...rec, v: layoutVersion() })); } catch {}
 }
 
 function rememberNearestStore(lat, lon) {
@@ -2667,7 +2682,7 @@ async function locateStore() {
   if (state === 'denied') return;
   if (state !== 'granted' && saved) {
     if (saved.id || saved.declined) return;
-    if (saved.far && saved.v === LAYOUT_VERSION) return;
+    if (saved.far && saved.v === layoutVersion()) return;
   }
   navigator.geolocation.getCurrentPosition(
     pos => rememberNearestStore(pos.coords.latitude, pos.coords.longitude),

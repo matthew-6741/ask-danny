@@ -342,7 +342,35 @@ const TRADE_LABELS = {
 // truth — so a crafted request could assert any aisle it liked and have it come
 // back stamped "verified from our database", which is precisely the claim the
 // database exists to make trustworthy.
-const PRODUCTS = require('./products.json');
+//
+// The live copy is read from the GitHub repo (same file, main branch), so that
+// checked aisles and new products go live without a Netlify deploy, which
+// costs 15 credits whatever changed. A push that changes only data files
+// skips the build (netlify.toml), and this picks the change up within about
+// five minutes. The copy bundled at deploy time is the fallback: a GitHub
+// outage or a malformed edit falls back to it rather than breaking answers.
+const BUNDLED_PRODUCTS = require('./products.json');
+let PRODUCTS = BUNDLED_PRODUCTS;
+const PRODUCTS_URL = 'https://raw.githubusercontent.com/matthew-6741/ask-danny/main/netlify/functions/products.json';
+const DATA_TTL_MS = 5 * 60 * 1000;
+let productsCheckedAt = 0;
+
+function validProducts(d) {
+  if (!d || typeof d !== 'object' || !d.meta || typeof d.meta.store !== 'string') return false;
+  const lists = Object.values(d).filter(Array.isArray);
+  return lists.length >= 3 && lists.every(l => l.every(p => p && typeof p.name === 'string'));
+}
+
+async function refreshProducts() {
+  if (Date.now() - productsCheckedAt < DATA_TTL_MS) return;
+  productsCheckedAt = Date.now();
+  try {
+    const res = await fetch(PRODUCTS_URL, { signal: AbortSignal.timeout(1500) });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (validProducts(data)) PRODUCTS = data;
+  } catch { /* keep what we have */ }
+}
 
 const TRADE_BUCKET = { carpentry: 'framing' };
 
@@ -502,7 +530,13 @@ function videoStore() {
 // appear in it can ever reach the model, which is what makes this safe: we
 // never pass a stranger's prose to an LLM, only counts of words we already
 // know. A video description cannot inject what it cannot say.
-const PART_VOCAB = (() => {
+// Rebuilt when the product data changes, since it is drawn from product names.
+let vocabFor = null, vocabCache = [];
+function partVocab() {
+  if (vocabFor !== PRODUCTS) { vocabFor = PRODUCTS; vocabCache = buildPartVocab(); }
+  return vocabCache;
+}
+function buildPartVocab() {
   // Words that appear in product names but say nothing about what is broken.
   // Without these, "repair" and "all-purpose" outrank "capacitor".
   const stop = new Set(('and for with the kit pack set inch feet type size duty heavy light '
@@ -519,7 +553,7 @@ const PART_VOCAB = (() => {
     });
   });
   return [...terms];
-})();
+}
 
 // Substring matching is why an earlier version ranked "pair" (inside "repair")
 // and "ridge" (inside "fridge") above the actual parts. Match whole words only.
@@ -575,7 +609,7 @@ async function searchRepairVideos(trade, prompt) {
     // "disposal" scoring 8 of 8 tells us only that YouTube understood the
     // query. What matters is which parts the videos add.
     const said = new Set(String(prompt).toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/));
-    const vocab = PART_VOCAB.filter(t => !said.has(t)).map(t => [t, wordRe(t)]);
+    const vocab = partVocab().filter(t => !said.has(t)).map(t => [t, wordRe(t)]);
 
     const tally = new Map();
     (vData.items || []).forEach(v => {
@@ -608,7 +642,7 @@ async function searchRepairVideos(trade, prompt) {
 }
 
 // Nothing a stranger wrote reaches the model. The tally is built by matching
-// video text against PART_VOCAB, which comes from our own product database, so
+// video text against partVocab(), which comes from our own product database, so
 // the only words that can appear here are words we already ship. A description
 // full of "ignore your instructions" contributes nothing but a failed match.
 // That is a stronger guarantee than fencing prose and hoping the model obeys
@@ -1307,6 +1341,7 @@ function jobContext(body, maxTokensCap) {
 
 exports.handler = async (event) => {
   connectBlobs(event);
+  await refreshProducts();
   const startedAt = Date.now();
   const msLeft = () => TOTAL_BUDGET_MS - (Date.now() - startedAt);
   // Only our own front-ends. A wildcard let any site call this endpoint from a
@@ -1574,6 +1609,7 @@ exports.handler = async (event) => {
 // paid model can be compared fairly with the free council. Netlify only ever
 // invokes `handler`.
 exports.draftWith = async function draftWith(agentId, body, { effort, timeoutMs = 120000 } = {}) {
+  await refreshProducts();
   const job = jobContext(body, planFor('free').maxTokens);
   const image = validateImage(body.image) || null;
   const started = Date.now();

@@ -73,6 +73,14 @@ function makeFetch(plan) {
     calls,
     fetch: async (url, opts) => {
       const u = String(url);
+      // Live product data from GitHub. Not a model call, so not counted;
+      // missing unless the plan serves some, which leaves the bundled copy.
+      if (u.includes('raw.githubusercontent.com')) {
+        if (plan.data === 'throw') throw new Error('github is down');
+        return plan.data
+          ? new Response(typeof plan.data === 'string' ? plan.data : JSON.stringify(plan.data), { status: 200 })
+          : new Response('404: Not Found', { status: 404 });
+      }
       const who = u.includes('groq') ? 'groq' : u.includes('googleapis') ? 'gemini' : 'other';
       calls.push({ who, url: u, body: opts && opts.body ? JSON.parse(opts.body) : null });
       const behaviour = plan[who];
@@ -157,6 +165,18 @@ const TINY_JPEG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z
     const w = (c2.items || []).find(i => /widget/i.test(i.name)) || {};
     ok("4c. a model's aisle number is never shown; its department is", !/\d/.test(w.aisle || '') && w.department === 'Plumbing — toilet repair',
        JSON.stringify(w));
+
+    // Live data: the copy on GitHub wins over the bundled one, so checked
+    // aisles go live without a deploy. Anything wrong with it falls back.
+    const live = JSON.parse(JSON.stringify(checked)); live.meta.location = 'From GitHub #2';
+    const d1 = JSON.parse((await load('ai-council.js', makeFetch({ data: live }).fetch, { './products.json': unchecked }).handler(evt(job))).body);
+    ok('4d. product data on GitHub is used without a deploy',
+       d1.aisleSource && d1.aisleSource.location === 'From GitHub #2', JSON.stringify(d1.aisleSource));
+    for (const [label, data] of [['missing', null], ['unreachable', 'throw'], ['not JSON', '{oops'], ['the wrong shape', { meta: {}, plumbing: 'x' }]]) {
+      const d2 = JSON.parse((await load('ai-council.js', makeFetch({ data }).fetch, { './products.json': checked }).handler(evt(job))).body);
+      ok(`4e. GitHub copy ${label}: the bundled copy is used`,
+         (d2.items || []).length > 0 && d2.aisleSource && d2.aisleSource.location === 'Test Store #1', JSON.stringify(d2.aisleSource));
+    }
   }
 
   // 5. rate limit persistence (Blobs unavailable locally -> must fail open, not crash)
@@ -961,8 +981,9 @@ const TINY_JPEG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z
     ok('build: the skip rule is a one-line literal string', !!rule);
     ok('build: always builds when there is no previous build', rule.startsWith('[ -n "$CACHED_COMMIT_REF" ] && '));
     ok('build: always builds a deliberate redeploy of the same commit', rule.includes('[ "$CACHED_COMMIT_REF" != "$COMMIT_REF" ]'));
-    ok('build: only docs, .github and eval are skippable',
-       (rule.match(/:\(exclude\)[^"]+/g) || []).join(' ') === ':(exclude)*.md :(exclude).github :(exclude)eval');
+    ok('build: only docs, .github, eval, checklists and live data files are skippable',
+       (rule.match(/:\(exclude\)[^"]+/g) || []).join(' ') === ':(exclude)*.md :(exclude).github :(exclude)eval'
+         + ' :(exclude)store-data :(exclude)store-layouts.json :(exclude)products.json :(exclude)netlify/functions/products.json');
   }
 
   // Nested tags. A single pass of the tag-stripping regex turned
@@ -1038,6 +1059,13 @@ const TINY_JPEG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z
        /saveStore\(s \? \{ id: s\.id \} : \{ id: '', far: true \}\)/.test(html)
          && !/setItem\([^)]*(lat|lon|coords)/.test(html));
     ok('layouts: only Home Depot lists show a layout', /storeKey === 'hd' && saved && saved\.id/.test(html));
+    ok('layouts: the file says when it last changed, so far-away users are re-asked after new stores',
+       /^\d{4}-\d{2}-\d{2}$/.test((layouts.meta || {}).updated || ''));
+    ok('layouts: read from GitHub first, then the deployed copy',
+       /for \(const url of \[LAYOUTS_URL, 'store-layouts\.json'\]\)/.test(html)
+         && /LAYOUTS_URL\s*=\s*'https:\/\/raw\.githubusercontent\.com\/matthew-6741\/ask-danny\/main\/store-layouts\.json'/.test(html));
+    const csp = (fs.readFileSync(path.join(ROOT_DIR, 'netlify.toml'), 'utf8').match(/connect-src ([^;]*)/) || [])[1] || '';
+    ok('layouts: the security policy lets the page read the GitHub copy', /https:\/\/raw\.githubusercontent\.com/.test(csp));
   }
 
   console.log('─────────────────────────────────────────────');
