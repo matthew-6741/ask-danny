@@ -1,73 +1,55 @@
 # Ask Danny — Project Briefing
 
 ## What this is
-AI-powered trade assistant. User describes a job → AI returns a one-trip material list with exact store aisle numbers. Targets Home Depot, Lowe's, and AutoZone.
+Ask Danny (ask-danny-ai.com, free beta) turns a typed repair problem, a photo or
+a short video into the fix: repair steps, a parts list with quantities and
+estimated prices, and where each part is in the store. Stores: Home Depot,
+Lowe's, AutoZone. Trades: plumbing, HVAC, carpentry, auto, appliance.
+Homeowners first; self-funded; no company formed yet (decided 2026-10-05).
+
+"Where each part is" means the department and section everywhere, the row and
+neighbours in four mapped LA Home Depots (see Store layouts), and an aisle
+number only where someone checked it in that store (see Aisle numbers).
 
 ## Key files
-- `index.html` — entire app (single file, ~2200 lines)
-- `products.json` — 181-item local product DB used for RAG injection into AI prompts
-- `~/Desktop/diagnostechai-DEPLOY/` — Netlify deploy folder (copy of both files + netlify.toml + Netlify Function)
+- `index.html`: the whole app plus the landing page (~4,450 lines). Inline
+  scripts are allowed by CSP hash: run `node eval/csp-hashes.js` after editing them.
+- `netlify/functions/ai-council.js`: the main API (`/api/council`). Server-side
+  retrieval from products.json, a server-owned prompt (never taken from the
+  request), Gemini and Groq drafts merged by a judge, safety stops, checked aisles.
+- `netlify/functions/ai-proxy.js`: single-model fallback (`/api/ai`).
+- `netlify/functions/updates.js` and `broadcast.js`: the update list (sign-up,
+  confirm, unsubscribe, admin export and actions) and sending through Resend.
+- `netlify/functions/products.json` (read live from GitHub, bundled as fallback)
+  and root `products.json` (local mode only): 249 products in 10 buckets. Keep identical.
+- `store-layouts.json`: department positions for four LA Home Depots.
+- `content/guides.js` and `scripts/pages.js`: public repair guides, trade pages, sitemap.
+- `scripts/build.js`: runs the checks, then publishes an allowlist to `dist/`.
+- `eval/local-check.js`: the pre-deploy checks. `eval/run.js` with `eval/jobs.json`:
+  the 58-job live eval and blind Claude comparison.
+- `store-data/`: store checklists and the helper page (never published).
 
-## Architecture
-- Plain HTML/CSS/JS, no framework
-- AI backend toggle at top of `index.html`:
-  - `USE_LOCAL = true` → Ollama local (`qwen3.6` at `http://localhost:11434`)
-  - `USE_LOCAL = false` → Netlify proxy function (`/api/ai`) → Claude `claude-sonnet-4-6`
-- API key lives in Netlify env var `ANTHROPIC_API_KEY` — never in the browser
-- Firebase Auth (compat SDK v10.12.0) for login — config placeholder at `FIREBASE_CONFIG` constant
-- Firestore for authenticated user job history; localStorage for guests
+## How an answer is made
+1. The page posts the job to `/api/council`, falling back to `/api/ai` if it fails.
+2. Rule 0 first: a gas smell, carbon monoxide, sparking wiring or water near live
+   power returns no parts and no steps, only "leave and call".
+3. Otherwise: notes, 3 to 8 steps, tools, and items with spec, quantity, price and
+   department. The model never gives aisle numbers; checked data supplies them.
+4. A paid tier (Claude, GPT, Grok) is built but off: `resolveTier()` always says
+   free and `ENABLE_PAID_COUNCIL` is unset.
+5. On localhost the page uses a local Ollama model (`USE_LOCAL`, set from the hostname).
 
-## Current feature set
-1. Voice input (Web Speech API)
-2. Job history (localStorage for guests, Firestore for auth users)
-3. Tool checklist per trade
-4. Multi-store compare (Home Depot vs Lowe's side by side)
-5. Quick templates per trade
-6. Offline mode (cache last result)
-7. Quantity calculator
-8. Access gate (`TRADE2026` — sessionStorage key `diagnostech_access`)
-9. Ollama local model toggle
+## Accounts and the first visit
+Firebase config is still a placeholder, so there are no accounts: everyone is a
+guest, history stays in the browser, and `openSignIn()` skips the sign-in screen
+while `fbAuth` is null. First visit: landing page, then a one-screen AI
+acknowledgement (18+, AI can be wrong; key `diagnostech_ai_ack_v4`), then the
+answer builds straight away. A guide's `?job=` link fills the job but never runs
+it, so crawlers spend nothing. The trade and store are guessed from the words
+(`guessTrade`, between the `trade-guess` markers, checked against the eval jobs)
+unless the person picks them.
 
-## Trades (reduced from 9 to 3)
-- `plumbing` — 🔧 Plumbing
-- `hvac` — ❄️ Basic HVAC
-- `carpentry` — 🪵 Carpentry (maps to `framing` key in products.json)
-
-## Auth flow
-Gate → Auth screen → App
-- Continue as Guest: localStorage only, no account needed
-- Sign In / Create Account: Firebase email+password or Google
-- Account types on sign-up: Consumer, Contractor, Corporation
-- Firebase not configured yet (placeholder values) → auth screen still shows, guest always works
-
-## Security layers added
-- Netlify Function (`netlify/functions/ai-proxy.js`): API key never reaches browser, rate limit 10 req/hr/IP, input sanitization
-- CSP + HSTS + security headers in `netlify.toml`
-- Firestore rules in `firestore.rules` — owner-only access, field size limits
-- No API key in client-side code
-
-## RAG flow
-`searchProducts(query, trade)` → keyword scores `products.json` → top matches injected into system prompt as "VERIFIED STORE INVENTORY" block → AI prefers verified items, marks unknown items with `(*)`
-
-## AI response format
-```
-NOTES: <notes>
-TOOLS:
-- <Tool name> | <Why>
-/TOOLS
-MATERIALS:
-- <Item> | <Spec> | <Qty> | Aisle <n> | ~$<price>
-/MATERIALS
-```
-
-## Deploy
-See **Deploying** below. The Desktop deploy folder and drag-and-drop are retired.
-Set env var `ANTHROPIC_API_KEY` in Netlify site settings before going live.
-Paste `firestore.rules` into Firebase Console → Firestore → Rules tab.
-
-## Git
-Repo at `/Users/sanchez/diagnostech-trade/` (branch: main)
-Latest commit: security hardening (proxy, CSP, rate limiting, Firestore rules)
+Security details live in README.md under Security; deploying is below.
 
 ## Netlify Blobs (rate limits, subscriber list, video cache)
 
@@ -151,6 +133,10 @@ root-level page that is not in the `PUBLISH` list in `scripts/build.js` makes th
 build fail on purpose; add it to the list.
 
 `git pull` first — another session has pushed to this repo mid-work before.
+
+Claude may push with exactly `git -C /Users/sanchez/diagnostech-trade push origin main`
+(allowed in Matthew's local Claude Code settings since 2026-10-12). Ask him before
+every push that deploys; docs-only pushes are free.
 
 To try a change before it ships, upload a draft. It gets its own URL and does
 not touch production. Drafts share production's Blobs stores, though, so rate

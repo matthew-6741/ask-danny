@@ -1,6 +1,6 @@
 # Ask Danny
 
-**Describe the job. Get a one-trip material list with aisle numbers.**
+**Describe the job. Get the steps, the parts, the cost, and where to find each part.**
 
 [ask-danny-ai.com](https://ask-danny-ai.com/) · Live, free beta
 
@@ -12,13 +12,13 @@ Ask Danny takes a job described the way someone actually says it:
 
 > *"My toilet keeps running"*
 
-and returns the **steps to fix it** plus one list: materials with quantities and specs, the tools needed, a rough price, and the **aisle number** at Home Depot, Lowe's, or AutoZone.
+and returns the **steps to fix it** plus one list: materials with quantities and specs, the tools needed, a rough price, and **where each part is** at Home Depot, Lowe's, or AutoZone.
 
 ## The two problems this has to solve
 
-**Models invent products.** A general model will happily produce a plausible part number for something that does not exist. So the server retrieves from a curated inventory (`products.json`, 249 products across 10 trade buckets), injects the matches into its own prompt, and replaces any aisle the model guessed with the verified one. Anything not in the inventory is included but marked low confidence, and an aisle we cannot verify is printed as "Ask associate" rather than invented.
+**Models invent products.** A general model will happily produce a plausible part number for something that does not exist. So the server retrieves from a curated inventory (`products.json`, 249 products across 10 trade buckets) and injects the matches into its own prompt. Anything not in the inventory is included but marked low confidence.
 
-About half of returned items currently carry a verified aisle. That ratio is the honest measure of whether this product is useful, and it is the number worth improving before anything else.
+Aisle numbers get the same treatment. A number is shown only when someone has checked it in that store; the model is told never to give one, and any that slips through is dropped. Every other part shows its department and section ("Plumbing — toilet repair"), and in four mapped Los Angeles Home Depots, which row that department is in and what it sits next to. No store has been checked yet, so today every part shows a department. The goal is 75–80% of shown aisle numbers correct at one store, and that ratio is the number worth improving before anything else.
 
 **Models sell the expensive part.** Asked why an AC runs but does not cool, a model will reach for refrigerant. The usual answer is a $20 capacitor. The system prompt carries per-trade check-order guidance — capacitor before refrigerant, flapper before a new toilet, coils before a compressor, battery before a starter, jam wrench before a new disposal — because selling someone the costly part when a cheap one usually fixes it is the worst thing this tool can do.
 
@@ -45,7 +45,7 @@ Browser (index.html)
            │             │
            └──► judge ───┘  synthesises one list
                     │
-                    └── verified aisles substituted from our own data
+                    └── aisle numbers only from checked store data
 ```
 
 If the council cannot be reached the client falls back to `/api/ai`, a single-model path that carries the same server-owned prompt and the same safety rules.
@@ -57,7 +57,9 @@ A circuit breaker opens after three consecutive failures from a provider and ret
 | | |
 |---|---|
 | Voice input | Describe the job hands-free (Web Speech API) |
-| Photo input | Photograph the problem instead of describing it |
+| Repair steps | 3 to 8 steps, safety first; none for hazards, only safe checks for pro work |
+| Photo and video input | Show the problem instead of describing it; a video becomes four frames on the device |
+| Store layouts | Where each department is in four mapped LA Home Depots, after asking for location once |
 | Multi-store compare | Home Depot vs Lowe's, side by side |
 | Tool checklist | What to bring, per trade |
 | Offline mode | Last result cached for the truck |
@@ -91,6 +93,7 @@ The traps are the interesting part: a gas smell must refuse rather than sell par
 - **CORS is an allowlist**, on both endpoints. `/api/ai` was `*`, which let any website spend our provider quota from a browser.
 - **Verified aisles come from our own data.** The client used to post `verifiedAisles` and the server trusted them, so a crafted request could assert any aisle it liked.
 - **Per-IP rate limiting** is stored in Netlify Blobs. Until September 2026 it silently enforced nothing. These are Lambda-compatibility functions, which get no Blobs environment unless the handler installs it from the request, and the library's own `connectLambda` drops the URL that strong-consistency reads need. Each handler now installs it itself, and `local-check.js` tests that.
+- **The update list is confirmed opt-in.** A sign-up stays pending until its owner clicks the link in a confirmation email, and the link opens a page with a button rather than confirming on open, because mail scanners open every link.
 - **Subscriber addresses are encrypted at rest** with AES-256-GCM when `LIST_KEY` is set, so a copy of the store, or an export taken with a stolen admin token, is ciphertext. The blob key stays a hash of the address, so lookups never decrypt. Set it with `netlify env:set LIST_KEY "$(openssl rand -base64 32)"`.
 - **Claude security review** reads every pull request's changes and comments on security problems (`.github/workflows/claude-security-review.yml`). It needs a `CLAUDE_API_KEY` repository secret and skips itself without one; fork and Dependabot PRs never get the key.
 - **CI security checks** run on every push and weekly: gitleaks for secrets in the whole history, OSV-Scanner and `npm audit` for vulnerable dependencies, CodeQL for the code itself, plus the same pre-deploy checks. Dependabot opens update PRs. See `.github/workflows/security.yml`.
@@ -118,7 +121,7 @@ python3 -m http.server 4173
 
 Then open <http://localhost:4173/index.html>.
 
-Set `USE_LOCAL = true` near the top of `index.html` to run against a local Ollama model instead of the deployed functions.
+On `localhost` the page talks to a local Ollama model instead of the deployed functions (`USE_LOCAL` is set from the hostname), so the AI features need Ollama running.
 
 Before any deploy:
 
@@ -143,7 +146,7 @@ node eval/local-check.js
 
 Live and free while in beta. Accounts are not wired up yet — Firebase config is still a placeholder, so everyone is a guest and history stays on the device.
 
-Material lists are generated by AI and are not checked by a licensed tradesperson. Verify quantities, specs and aisle numbers before buying, and hire a professional for gas, electrical or structural work.
+Material lists are generated by AI and are not checked by a licensed tradesperson. Verify quantities, specs and store locations before buying, and hire a professional for gas, electrical or structural work.
 
 ## Third-party assets
 
