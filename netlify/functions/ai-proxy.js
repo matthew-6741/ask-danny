@@ -435,10 +435,6 @@ const ALLOWED_ORIGINS = [
   'https://ask-danny-ai.com',
   'https://www.ask-danny-ai.com',
   'https://ask-danny.netlify.app',
-  // Old domain, now a redirect. Kept one release so a page cached before
-  // the switch can still reach the API; remove after that.
-  'https://diagnostechai.com',
-  'https://www.diagnostechai.com',
 ];
 
 exports.handler = async (event) => {
