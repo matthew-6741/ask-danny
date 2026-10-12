@@ -1,0 +1,45 @@
+name: Claude security review
+
+# Reviews each pull request's changes for security problems and comments on
+# the PR. It needs a repository secret named CLAUDE_API_KEY (an Anthropic API
+# key), and every run is billed to that key. Without the secret the job skips
+# itself instead of failing.
+#
+# Pull requests from forks never receive repository secrets, so a stranger's
+# PR can neither run this on your key nor read it. Dependabot PRs don't get
+# them either and are skipped; they only bump versions, which the Security
+# workflow's dependency scanners already check.
+
+permissions:
+  pull-requests: write  # needed to leave review comments
+  contents: read
+
+on:
+  pull_request:
+
+jobs:
+  security:
+    if: github.actor != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check the API key is set
+        id: key
+        env:
+          KEY: ${{ secrets.CLAUDE_API_KEY }}
+        run: |
+          if [ -n "$KEY" ]; then echo "present=yes" >> "$GITHUB_OUTPUT"
+          else echo "present=no" >> "$GITHUB_OUTPUT"; echo "::notice::CLAUDE_API_KEY is not set; skipping the review."; fi
+
+      - uses: actions/checkout@v7
+        if: steps.key.outputs.present == 'yes'
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 2
+
+      # Pinned to a commit rather than @main, so a change upstream can't
+      # alter what runs with your key until Dependabot proposes it.
+      - uses: anthropics/claude-code-security-review@0c6a49f1fa56a1d472575da86a94dbc1edb78eda  # main, 2026-02-11
+        if: steps.key.outputs.present == 'yes'
+        with:
+          comment-pr: true
+          claude-api-key: ${{ secrets.CLAUDE_API_KEY }}
