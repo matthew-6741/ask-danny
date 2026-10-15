@@ -98,6 +98,16 @@ function evt(body, origin = 'https://ask-danny-ai.com') {
 
 const TINY_JPEG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
 
+// The Netlify build runs these checks with the site's real environment: list
+// keys, the admin token, the mail provider key and the model keys. Every check
+// sets the fake values it needs, so real ones only leak in and change what is
+// being tested (a real LIST_KEY_2 failed the 2026-10-13 build). Clear them first.
+for (const name of Object.keys(process.env)) {
+  if (/^(LIST_KEY(_\d+)?|ADMIN_TOKEN|RESEND_API_KEY|MAIL_FROM|MAIL_POSTAL|ANTHROPIC_API_KEY|ANTHROPIC_MODEL|GEMINI_API_KEY|GROQ_API_KEY|OPENAI_API_KEY|XAI_API_KEY|ENABLE_PAID_COUNCIL|photos|newapikey)$/.test(name)) {
+    delete process.env[name];
+  }
+}
+
 (async () => {
   process.env.GROQ_API_KEY   = 'gsk_' + 'x'.repeat(48);
   process.env.GEMINI_API_KEY = 'AIza' + 'y'.repeat(35);

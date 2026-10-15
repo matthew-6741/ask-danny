@@ -32,8 +32,11 @@ echo "1/5  Resend key"
 echo "     In Resend: click Add on the new key, then the copy icon next to it."
 # Secret values must name the deploy contexts they apply to. The key only
 # sends email from production; previews never get it.
+if [[ " $(env_names) " == *" RESEND_API_KEY "* ]]; then
+  echo "     Already saved; skipping."
+else
 while true; do
-  read -r -s -p "     Paste it here and press Enter (nothing shows), or type skip: " RK; echo
+  RK=""; read -r -s -p "     Paste it here and press Enter (nothing shows), or type skip: " RK; echo
   case "$RK" in
     re_*) netlify env:set RESEND_API_KEY "$RK" --secret --context production --force >/dev/null
           echo "     Saved RESEND_API_KEY."; break ;;
@@ -41,6 +44,7 @@ while true; do
     *)    echo "     That wasn't a Resend key (they start with re_). Copy it again and paste." ;;
   esac
 done
+fi
 unset RK
 
 echo
