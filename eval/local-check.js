@@ -1247,6 +1247,45 @@ for (const name of Object.keys(process.env)) {
     for (const k of ['RESEND_API_KEY', 'MAIL_FROM', 'MAIL_POSTAL', 'ADMIN_TOKEN']) delete process.env[k];
   }
 
+  // Gemini under load (2026-10-20: "high demand", then "timed out", two of
+  // two live requests). A stalled first model must not use the whole budget,
+  // and the status must name each model's error and count JSON drafts.
+  {
+    const job = { tier: 'free', prompt: 'bathroom sink drains really slow', store: 'hd', trade: 'plumbing' };
+    const providerStatus = (d, name) => (d.providers || []).find(p => p.provider === name && p.stage === 'opinion') || {};
+
+    const plain = JSON.parse((await load('ai-council.js', makeFetch({}).fetch).handler(evt(job))).body);
+    ok('gemini: the status counts the items in JSON drafts',
+       providerStatus(plain, 'Groq').itemCount > 0 && providerStatus(plain, 'Gemini').itemCount > 0,
+       JSON.stringify(plain.providers));
+
+    process.env.GEMINI_FIRST_TRY_MS = '300';
+    const seen = [];
+    const stallFirst = async (url) => {
+      const u = String(url);
+      if (u.includes('googleapis')) {
+        seen.push(u.match(/models\/([^:]+):/)[1]);
+        if (u.includes('gemini-3.1-flash-lite')) return new Promise(() => {});   // stalls
+        return geminiBody(GOOD_JSON);
+      }
+      return groqBody(GOOD_JSON);
+    };
+    const t0 = Date.now();
+    const d1 = JSON.parse((await load('ai-council.js', stallFirst).handler(evt(job))).body);
+    ok('gemini: a stalled first model gives way to the next one',
+       providerStatus(d1, 'Gemini').ok === true && seen.includes('gemini-flash-latest') && Date.now() - t0 < 5000,
+       `${JSON.stringify(providerStatus(d1, 'Gemini'))} models=${seen.join(',')} ${Date.now() - t0}ms`);
+
+    const overloaded = async (url) => String(url).includes('googleapis')
+      ? new Response(JSON.stringify({ error: { message: 'This model is currently experiencing high demand.' } }), { status: 503 })
+      : groqBody(GOOD_JSON);
+    const d2 = JSON.parse((await load('ai-council.js', overloaded).handler(evt(job))).body);
+    const err = String(providerStatus(d2, 'Gemini').error || '');
+    ok('gemini: when every model fails, the status names each one',
+       /gemini-3\.1-flash-lite/.test(err) && /gemini-flash-latest/.test(err) && (d2.items || []).length > 0, err);
+    delete process.env.GEMINI_FIRST_TRY_MS;
+  }
+
   console.log('─────────────────────────────────────────────');
   console.log(`  ${pass} passed, ${fail} failed`);
   if (failures.length) {

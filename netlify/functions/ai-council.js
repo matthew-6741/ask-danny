@@ -803,24 +803,49 @@ async function callGroq(system, prompt, maxTokens, image) {
   throw lastErr || new Error('No usable Groq model');
 }
 
+// Every model but the last gets a slice of the opinion budget. Under load,
+// Google sometimes stalls instead of answering "high demand", and a stalled
+// first model used to spend the whole 12s budget before the next one was
+// tried. Each model's error is kept, so the providers status says what
+// actually happened instead of only the last message.
+const GEMINI_FIRST_TRY_MS = () => Number(process.env.GEMINI_FIRST_TRY_MS) || 6000;
+
 async function callGemini(system, prompt, maxTokens, image) {
-  let lastErr = null;
-  for (const model of GEMINI_MODELS) {
-    try { return await geminiOnce(model, system, prompt, maxTokens, image); }
+  const errors = [];
+  for (const [i, model] of GEMINI_MODELS.entries()) {
+    const limitMs = i < GEMINI_MODELS.length - 1 ? GEMINI_FIRST_TRY_MS() : 0;
+    try { return await geminiOnce(model, system, prompt, maxTokens, image, limitMs); }
     catch (e) {
-      lastErr = e;
-      if (!RETRYABLE.test(e.message) && !/no longer available|not supported/i.test(e.message)) throw e;
+      errors.push(`${model}: ${String(e.message).slice(0, 90)}`);
+      if (!RETRYABLE.test(e.message) && !/no longer available|not supported/i.test(e.message)) {
+        e.message = errors.join('; ');
+        throw e;
+      }
     }
   }
-  throw lastErr || new Error('No usable Gemini model');
+  throw new Error(errors.join('; ') || 'No usable Gemini model');
 }
 
-async function geminiOnce(model, system, prompt, maxTokens, image) {
+async function geminiOnce(model, system, prompt, maxTokens, image, limitMs = 0) {
+  if (limitMs > 0) {
+    const ctl = new AbortController();
+    let timer;
+    const stall = new Promise((_, reject) => {
+      timer = setTimeout(() => { ctl.abort(); reject(new Error(`timed out after ${limitMs / 1000}s`)); }, limitMs);
+    });
+    try { return await Promise.race([geminiRequest(model, system, prompt, maxTokens, image, ctl.signal), stall]); }
+    finally { clearTimeout(timer); }
+  }
+  return geminiRequest(model, system, prompt, maxTokens, image);
+}
+
+async function geminiRequest(model, system, prompt, maxTokens, image, signal) {
   const parts = [{ text: prompt }];
   if (image) parts.push({ inlineData: { mimeType: image.mediaType, data: image.base64 } });
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${keyFor('GEMINI_API_KEY')}`;
   const res = await fetch(url, {
     method: 'POST',
+    signal,
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       systemInstruction: { parts: [{ text: system }] },
@@ -1450,7 +1475,9 @@ exports.handler = async (event) => {
     if (usable) {
       recordSuccess(members[i].id);
       drafts.push({ id: members[i].id, provider: name, raw: r.value, parsed: draft });
-      status.push({ provider: name, ok: true, stage: 'opinion', itemCount: parseResponse(r.value).items.length });
+      // Count the normalized draft: parseResponse only reads the text format,
+      // so JSON drafts always reported 0 items here.
+      status.push({ provider: name, ok: true, stage: 'opinion', itemCount: draft.items.length });
     } else {
       // A photo job failing says little about the provider's text path, and
       // opening the circuit on it would drop that provider from text jobs too.
