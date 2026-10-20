@@ -11,6 +11,7 @@
 #    you can save it in Passwords. Netlify cannot show it again.
 # 4. Deploys (pushes waiting commits, or rebuilds), so the functions get them.
 # 5. Re-encrypts every list address with LIST_KEY_2, then removes the old key.
+#    scripts/rekey-list.sh does this step on its own, with no deploy.
 #    See "Update list: confirmation and key rotation" in CLAUDE.md.
 set -euo pipefail
 cd "$(dirname "$0")/.."

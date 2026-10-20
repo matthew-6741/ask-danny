@@ -238,3 +238,8 @@ changes only reach the functions with the next deploy, so set new variables
 before the push that ships them. `ADMIN_TOKEN` rotates by setting a new value;
 generate it locally so its owner can store it, since a `--secret` value cannot be
 read back.
+
+`scripts/set-list-secrets.sh` does the whole rotation for Matthew (he runs it in
+Terminal; secrets go in at hidden prompts). `scripts/rekey-list.sh` is just its
+last step, rekey then unset `LIST_KEY`, for after a deploy has shipped the new
+key; it asks for the admin password and costs no deploy.
