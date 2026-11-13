@@ -2979,6 +2979,10 @@ function onKey(e) {
 // Phone cameras produce 3-12MP files. Sending those raw would blow past
 // Netlify's request limit and cost a fortune in image tokens, so downscale to
 // 1024px on the long edge before anything leaves the device.
+// Redrawing on a canvas is also the privacy step: a canvas holds pixels only,
+// so the JPEG it makes carries no EXIF, GPS location, camera or date data from
+// the original. Never send the picked file's own bytes. Videos are the same:
+// only frames drawn on a canvas are sent.
 const PHOTO_MAX_EDGE = 1024;
 const PHOTO_QUALITY  = 0.82;
 let jobPhoto = null;   // { dataUrl, mediaType, base64, bytes, fromVideo }

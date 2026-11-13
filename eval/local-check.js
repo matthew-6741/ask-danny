@@ -1286,7 +1286,33 @@ for (const name of Object.keys(process.env)) {
     delete process.env.GEMINI_FIRST_TRY_MS;
   }
 
-  console.log('─────────────────────────────────────────────');
+  // \u2500\u2500 Invisible and odd characters in model answers \u2500\u2500
+  {
+    const copies = ['ai-council.js', 'ai-proxy.js'].map(f =>
+      (fs.readFileSync(path.join(SRC, f), 'utf8').match(/\/\* clean-text:start \*\/([\s\S]*?)\/\* clean-text:end \*\//) || [])[1] || '');
+    ok('clean-text: both functions carry the same cleanModelText', copies[0] && copies[0] === copies[1]);
+    const cleanModelText = new Function(copies[0] + '\nreturn cleanModelText;')();
+    const dirty = 'P\u200B-Trap\u00AD Kit\u00A01-1/2\u202Fin\u2028\u202Eok\u202C\uFEFF\u{E0041}\u0007';
+    const cleaned = cleanModelText(dirty);
+    ok('clean-text: invisible characters go, odd spaces become plain ones',
+       cleaned === 'P-Trap Kit 1-1/2 in\nok', JSON.stringify(cleaned));
+    const plain = 'Shut off the water.\n1. Loosen the slip nuts — by hand.\tThen 3/4" fittings, ½ in, 90°.';
+    ok('clean-text: ordinary text, tabs, dashes and symbols are untouched', cleanModelText(plain) === plain);
+
+    const dirtyJson = GOOD_JSON.replace('P-Trap Kit', 'P\u200B-Trap\u00A0Kit').replace('1-1/2 in PVC', '1-1/2\u202Fin\u2060 PVC');
+    const both = makeFetch({ gemini: () => geminiBody(dirtyJson), groq: () => groqBody(dirtyJson) }).fetch;
+    const d = JSON.parse((await load('ai-council.js', both).handler(evt({ tier: 'free', prompt: 'leaking p-trap under kitchen sink', store: 'hd', trade: 'plumbing' }))).body);
+    const trap = (d.items || []).find(i => /trap/i.test(i.name)) || {};
+    ok('clean-text: the council returns clean part names and specs',
+       trap.name === 'P-Trap Kit' && trap.spec === '1-1/2 in PVC', JSON.stringify(trap));
+
+    const dirtyNotes = 'NOTES: Shut\u200B off\u00A0the water.';
+    const m = makeFetch({ groq: () => groqBody(dirtyNotes), gemini: () => geminiBody(dirtyNotes) });
+    const p = JSON.parse((await load('ai-proxy.js', m.fetch).handler(evt({ tier: 'free', system: 'x', prompt: 'leaking p-trap', max_tokens: 500 }))).body);
+    ok('clean-text: the fallback proxy returns clean text', p.text === 'NOTES: Shut off the water.', JSON.stringify(p.text));
+  }
+
+  console.log('\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500');
   console.log(`  ${pass} passed, ${fail} failed`);
   if (failures.length) {
     console.log('');

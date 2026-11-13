@@ -437,6 +437,24 @@ const ALLOWED_ORIGINS = [
   'https://ask-danny.netlify.app',
 ];
 
+// Model answers sometimes carry invisible or unusual characters: zero-width
+// spaces, soft hyphens, direction controls, Unicode tag characters, no-break
+// and other odd spaces. They make "1/2 in." fail a copy-paste into a store's
+// search box and can reorder text on screen, so they go before parsing. Odd
+// spaces become plain spaces, line separators become newlines, and the rest is
+// dropped. The same helper is copied into ai-council.js and ai-proxy.js, and
+// eval/local-check.js tests each copy.
+/* clean-text:start */
+function cleanModelText(raw) {
+  return String(raw == null ? '' : raw)
+    .replace(/[\u2028\u2029]/g, '\n')
+    .replace(/[\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000]/g, ' ')
+    .replace(/[\u00AD\u034F\u061C\u115F\u1160\u17B4\u17B5\u180E\u200B-\u200F\u202A-\u202E\u2060-\u206F\u3164\uFEFF\uFFA0\uFFF9-\uFFFB]/g, '')
+    .replace(/[\u{E0000}-\u{E007F}]/gu, '')
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, '');
+}
+/* clean-text:end */
+
 exports.handler = async (event) => {
   connectBlobs(event);
   // This was '*', so any website could call this endpoint from a browser and
@@ -507,7 +525,7 @@ exports.handler = async (event) => {
   }
 
   try {
-    const text = await provider.call(system, prompt, maxTokens, image);
+    const text = cleanModelText(await provider.call(system, prompt, maxTokens, image));
     return {
       statusCode: 200,
       headers: {
