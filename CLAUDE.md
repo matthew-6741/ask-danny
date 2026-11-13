@@ -28,6 +28,10 @@ number only where someone checked it in that store (see Aisle numbers).
 - `eval/local-check.js`: the pre-deploy checks. `eval/run.js` with `eval/jobs.json`:
   the 58-job live eval and blind Claude comparison.
 - `store-data/`: store checklists and the helper page (never published).
+- `/watermark` (`.claude/commands/watermark.md`, runs `eval/watermark.js`): finds
+  or (`--fix`) removes hidden and odd characters in files or pasted text, using
+  `cleanModelText` from ai-council.js, the cleanup every model answer gets. It
+  does not strip AI-provenance watermarks.
 
 ## How an answer is made
 1. The page posts the job to `/api/council`, falling back to `/api/ai` if it fails.
